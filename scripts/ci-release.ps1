@@ -40,6 +40,13 @@ if ($needInno) {
     }
 }
 
+Write-Host "==> Restoring NuGet packages in background"
+$restoreJob = Start-Job -ScriptBlock {
+    param($Proj)
+    & dotnet restore $Proj -r win-x64 --verbosity minimal
+    if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed: $LASTEXITCODE" }
+} -ArgumentList $AppProj
+
 Write-Host "==> Configure Screeni.Core (Ninja)"
 cmake -S $CoreSrc -B $CoreBuild -G Ninja -DCMAKE_BUILD_TYPE=Release
 if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
@@ -56,6 +63,10 @@ if (-not (Test-Path $CoreDll)) {
     throw "Screeni.Core.dll not found after build."
 }
 
+Write-Host "==> Waiting for NuGet restore"
+Receive-Job $restoreJob -Wait -AutoRemoveJob
+Write-Timing "restore wait (parallel)" $sw
+
 $sw.Restart()
 Write-Host "==> Publish Screeni.App"
 if (Test-Path $PublishDir) {
@@ -67,6 +78,7 @@ dotnet publish $AppProj `
     -c Release `
     -r win-x64 `
     --self-contained true `
+    --no-restore `
     -p:Platform=x64 `
     -p:PublishSingleFile=false `
     -p:WindowsAppSDKSelfContained=false `

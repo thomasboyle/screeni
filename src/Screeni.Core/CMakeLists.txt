@@ -41,6 +41,11 @@ target_link_libraries(Screeni.Core
         uuid
 )
 
+# Faster sqlite compile on CI runners (functional Release build, less optimizing).
+if(DEFINED ENV{CI} OR DEFINED ENV{GITHUB_ACTIONS})
+    set_source_files_properties(third_party/sqlite/sqlite3.c PROPERTIES COMPILE_OPTIONS "/O1")
+endif()
+
 # /W4 on our C++ only — sqlite3.c is third-party and too noisy under /W4.
 if(MSVC)
     target_compile_options(Screeni.Core PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/W4>)

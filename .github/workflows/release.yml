@@ -10,7 +10,8 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    timeout-minutes: 1
+    # Temporarily 2m to capture a full profile + warm caches; tighten after green.
+    timeout-minutes: 2
 
     steps:
       - uses: actions/checkout@v5
@@ -42,6 +43,11 @@ jobs:
           path: ~/.nuget/packages
           key: nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: nuget-
+
+      - uses: actions/cache@v4
+        with:
+          path: build/Screeni.Core
+          key: core-${{ hashFiles('src/Screeni.Core/**') }}
 
       - uses: TheMrMilchmann/setup-msvc-dev@v4
         with:
