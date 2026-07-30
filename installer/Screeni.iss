@@ -1,5 +1,7 @@
 #define MyAppName "Screeni"
-#define MyAppVersion "1.0.0"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.0"
+#endif
 #define MyAppPublisher "Screeni"
 #define MyAppExeName "Screeni.App.exe"
 #ifndef PublishDir
