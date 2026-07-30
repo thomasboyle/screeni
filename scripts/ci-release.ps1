@@ -27,6 +27,19 @@ if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
     throw "ninja not found on PATH (expected on windows-latest, as in Latenci CI)"
 }
 
+$needInno = -not (
+    (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") -or
+    (Test-Path "${env:ProgramFiles}\Inno Setup 6\ISCC.exe")
+)
+$chocoJob = $null
+if ($needInno) {
+    Write-Host "==> Installing Inno Setup in background"
+    $chocoJob = Start-Job -ScriptBlock {
+        & choco install innosetup -y --no-progress
+        if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed: $LASTEXITCODE" }
+    }
+}
+
 Write-Host "==> Restoring NuGet packages in background"
 $restoreJob = Start-Job -ScriptBlock {
     param($Proj)
@@ -85,6 +98,11 @@ $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
 Copy-Item (Join-Path $Root "src\Screeni.App\Assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
 Get-ChildItem $PublishDir -Filter *.pdb -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
+
+if ($chocoJob) {
+    Write-Host "==> Waiting for Inno Setup install"
+    Receive-Job $chocoJob -Wait -AutoRemoveJob
+}
 
 $Iscc = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
