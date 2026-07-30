@@ -1,7 +1,9 @@
+; Screeni — Windows installer (Inno Setup 6)
+; https://jrsoftware.org/isinfo.php
+
+#include "ci-version.iss"
+
 #define MyAppName "Screeni"
-#ifndef MyAppVersion
-  #define MyAppVersion "1.0.0"
-#endif
 #define MyAppPublisher "Screeni"
 #define MyAppExeName "Screeni.App.exe"
 #ifndef PublishDir
@@ -20,8 +22,13 @@ PrivilegesRequired=lowest
 OutputDir=..\artifacts\installer
 OutputBaseFilename=ScreeniSetup-{#MyAppVersion}
 SetupIconFile=..\src\Screeni.App\Assets\Screeni.ico
+#ifdef CI
+Compression=zip
+SolidCompression=no
+#else
 Compression=lzma
 SolidCompression=yes
+#endif
 WizardStyle=modern
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesAllowed=x64compatible
