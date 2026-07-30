@@ -47,7 +47,7 @@ public partial class App : Application
 
         _tray = new TrayIconService("Screeni");
         _tray.ShowRequested += ShowMainWindow;
-        _tray.ExitRequested += ExitApp;
+        _tray.ExitRequested += OnTrayExitRequested;
     }
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
@@ -76,9 +76,32 @@ public partial class App : Application
         }
     }
 
+    private void OnTrayExitRequested()
+    {
+        // Do not tear down the tray HWND from inside its WindowProc / popup stack.
+        var queue = _window?.DispatcherQueue;
+        if (queue is not null && queue.TryEnqueue(ExitApp))
+        {
+            return;
+        }
+
+        ExitApp();
+    }
+
     public void ExitApp()
     {
+        if (_exitRequested)
+        {
+            return;
+        }
+
         _exitRequested = true;
+
+        if (_window is MainWindow main)
+        {
+            main.ViewModel.DisposeTimer();
+        }
+
         _tray?.Dispose();
         _tray = null;
         _usage.Stop();

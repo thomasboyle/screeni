@@ -8,7 +8,7 @@ namespace Screeni.Services;
 internal sealed class TrayIconService : IDisposable
 {
     private const uint WmTrayIcon = 0x8001;
-    private const uint WmCommand = 0x0111;
+    private const uint WmNull = 0x0000;
     private const uint WmDestroy = 0x0002;
     private const uint NimAdd = 0x00000000;
     private const uint NimModify = 0x00000001;
@@ -18,6 +18,8 @@ internal sealed class TrayIconService : IDisposable
     private const uint NifTip = 0x00000004;
     private const uint WmLButtonDblClk = 0x0203;
     private const uint WmRButtonUp = 0x0205;
+    private const uint TpmRightButton = 0x0002;
+    private const uint TpmReturnCmd = 0x0100;
     private const int IdShow = 1001;
     private const int IdExit = 1002;
 
@@ -105,20 +107,6 @@ internal sealed class TrayIconService : IDisposable
             return IntPtr.Zero;
         }
 
-        if (msg == WmCommand)
-        {
-            var id = wParam.ToInt32() & 0xFFFF;
-            if (id == IdShow)
-            {
-                ShowRequested?.Invoke();
-            }
-            else if (id == IdExit)
-            {
-                ExitRequested?.Invoke();
-            }
-            return IntPtr.Zero;
-        }
-
         if (msg == WmDestroy)
         {
             return IntPtr.Zero;
@@ -134,8 +122,20 @@ internal sealed class TrayIconService : IDisposable
         AppendMenuW(menu, 0, (UIntPtr)IdExit, "Exit");
         GetCursorPos(out var pt);
         SetForegroundWindow(_hwnd);
-        TrackPopupMenu(menu, 0x0100, pt.X, pt.Y, 0, _hwnd, IntPtr.Zero);
+        // TPM_RETURNCMD: command id is the return value (no WM_COMMAND). Handle it only
+        // after TrackPopupMenu returns so Exit never runs inside the popup's nested loop.
+        var cmd = TrackPopupMenu(menu, TpmRightButton | TpmReturnCmd, pt.X, pt.Y, 0, _hwnd, IntPtr.Zero);
+        PostMessageW(_hwnd, WmNull, IntPtr.Zero, IntPtr.Zero);
         DestroyMenu(menu);
+
+        if (cmd == IdShow)
+        {
+            ShowRequested?.Invoke();
+        }
+        else if (cmd == IdExit)
+        {
+            ExitRequested?.Invoke();
+        }
     }
 
     private static IntPtr LoadIcon()
@@ -255,4 +255,7 @@ internal sealed class TrayIconService : IDisposable
 
     [DllImport("user32.dll")]
     private static extern int TrackPopupMenu(IntPtr hMenu, uint uFlags, int x, int y, int nReserved, IntPtr hWnd, IntPtr prcRect);
+
+    [DllImport("user32.dll")]
+    private static extern bool PostMessageW(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 }
