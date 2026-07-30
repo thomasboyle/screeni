@@ -34,28 +34,14 @@ jobs:
             $next = (Select-String -Path installer/ci-version.iss -Pattern '#define MyAppVersion "(.*)"').Matches[0].Groups[1].Value
           }
           "version=$next" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "#define MyAppVersion `"$next`"" | Set-Content installer/ci-version.iss -Encoding utf8NoBOM
           Write-Host "Next version: $next"
-
-      - name: Set installer version
-        shell: pwsh
-        run: |
-          $version = '${{ steps.version.outputs.version }}'
-          "#define MyAppVersion `"$version`"" | Set-Content installer/ci-version.iss -Encoding utf8NoBOM
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
 
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: nuget-
-
-      - uses: actions/cache@v4
-        with:
-          path: installer/redist
-          key: wasdk-redist-1.6.250602001
 
       - uses: TheMrMilchmann/setup-msvc-dev@v4
         with:

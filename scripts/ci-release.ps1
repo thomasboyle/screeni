@@ -20,39 +20,24 @@ $AppProj = Join-Path $Root "src\Screeni.App\Screeni.App.csproj"
 $PublishDir = Join-Path $Root "artifacts\publish"
 $InstallerDir = Join-Path $Root "artifacts\installer"
 $Iss = Join-Path $Root "installer\Screeni.iss"
-$Redist = Join-Path $Root "installer\redist\WindowsAppRuntimeInstall-x64.exe"
-$RedistUrl = "https://aka.ms/windowsappsdk/1.6/1.6.250602001/windowsappruntimeinstall-x64.exe"
 
 "#define MyAppVersion `"$Version`"" | Set-Content (Join-Path $Root "installer\ci-version.iss") -Encoding utf8NoBOM
 
-# Kick off tool install in parallel with the native build when needed.
-$chocoJob = $null
-$needNinja = -not (Get-Command ninja -ErrorAction SilentlyContinue)
+if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
+    throw "ninja not found on PATH (expected on windows-latest, as in Latenci CI)"
+}
+
 $needInno = -not (
     (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") -or
     (Test-Path "${env:ProgramFiles}\Inno Setup 6\ISCC.exe")
 )
-if ($needNinja -or $needInno) {
-    $pkgs = @()
-    if ($needNinja) { $pkgs += "ninja" }
-    if ($needInno) { $pkgs += "innosetup" }
-    Write-Host "==> Installing tools in background: $($pkgs -join ', ')"
+$chocoJob = $null
+if ($needInno) {
+    Write-Host "==> Installing Inno Setup in background"
     $chocoJob = Start-Job -ScriptBlock {
-        param($Packages)
-        choco install @Packages -y --no-progress
-        if ($LASTEXITCODE -ne 0) { throw "choco install failed: $LASTEXITCODE" }
-    } -ArgumentList (, $pkgs)
-}
-
-# Prefetch WASDK redist in parallel when missing.
-$redistJob = $null
-if (-not (Test-Path $Redist)) {
-    New-Item -ItemType Directory -Force -Path (Split-Path $Redist) | Out-Null
-    Write-Host "==> Downloading Windows App Runtime redist in background"
-    $redistJob = Start-Job -ScriptBlock {
-        param($Url, $OutFile)
-        Invoke-WebRequest -Uri $Url -OutFile $OutFile
-    } -ArgumentList $RedistUrl, $Redist
+        & choco install innosetup -y --no-progress
+        if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed: $LASTEXITCODE" }
+    }
 }
 
 Write-Host "==> Configure Screeni.Core (Ninja)"
@@ -95,19 +80,11 @@ Copy-Item $CoreDll (Join-Path $PublishDir "Screeni.Core.dll") -Force
 $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
 Copy-Item (Join-Path $Root "src\Screeni.App\Assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
-
 Get-ChildItem $PublishDir -Filter *.pdb -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
 
-if ($redistJob) {
-    Write-Host "==> Waiting for redist download"
-    Receive-Job $redistJob -Wait -AutoRemoveJob
-    if (-not (Test-Path $Redist)) { throw "Redist download failed" }
-}
 if ($chocoJob) {
-    Write-Host "==> Waiting for tool install"
+    Write-Host "==> Waiting for Inno Setup install"
     Receive-Job $chocoJob -Wait -AutoRemoveJob
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
-                [System.Environment]::GetEnvironmentVariable("Path", "User")
 }
 
 $Iscc = @(
