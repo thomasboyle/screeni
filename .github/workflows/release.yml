@@ -10,7 +10,7 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    timeout-minutes: 2
+    timeout-minutes: 1
 
     steps:
       - uses: actions/checkout@v5
@@ -44,11 +44,13 @@ jobs:
           restore-keys: nuget-
 
       - uses: actions/cache@v4
+        id: core-dll
         with:
           path: artifacts/ci-cache/Screeni.Core.dll
           key: core-dll-${{ hashFiles('src/Screeni.Core/**') }}
 
       - uses: TheMrMilchmann/setup-msvc-dev@v4
+        if: steps.core-dll.outputs.cache-hit != 'true'
         with:
           arch: x64
 
