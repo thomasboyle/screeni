@@ -27,19 +27,6 @@ if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
     throw "ninja not found on PATH (expected on windows-latest, as in Latenci CI)"
 }
 
-$needInno = -not (
-    (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") -or
-    (Test-Path "${env:ProgramFiles}\Inno Setup 6\ISCC.exe")
-)
-$chocoJob = $null
-if ($needInno) {
-    Write-Host "==> Installing Inno Setup in background"
-    $chocoJob = Start-Job -ScriptBlock {
-        & choco install innosetup -y --no-progress
-        if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed: $LASTEXITCODE" }
-    }
-}
-
 Write-Host "==> Restoring NuGet packages in background"
 $restoreJob = Start-Job -ScriptBlock {
     param($Proj)
@@ -47,10 +34,16 @@ $restoreJob = Start-Job -ScriptBlock {
     if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed: $LASTEXITCODE" }
 } -ArgumentList $AppProj
 
-Write-Host "==> Configure Screeni.Core (Ninja)"
-cmake -S $CoreSrc -B $CoreBuild -G Ninja -DCMAKE_BUILD_TYPE=Release
-if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
-Write-Timing "cmake configure" $sw
+$ninjaFile = Join-Path $CoreBuild "build.ninja"
+if (-not (Test-Path $ninjaFile)) {
+    Write-Host "==> Configure Screeni.Core (Ninja)"
+    cmake -S $CoreSrc -B $CoreBuild -G Ninja -DCMAKE_BUILD_TYPE=Release
+    if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
+    Write-Timing "cmake configure" $sw
+} else {
+    Write-Host "==> Reusing cached Screeni.Core build directory"
+    Write-Timing "cmake configure (cached)" $sw
+}
 
 $sw.Restart()
 Write-Host "==> Build Screeni.Core"
@@ -65,7 +58,6 @@ if (-not (Test-Path $CoreDll)) {
 
 Write-Host "==> Waiting for NuGet restore"
 Receive-Job $restoreJob -Wait -AutoRemoveJob
-Write-Timing "restore wait (parallel)" $sw
 
 $sw.Restart()
 Write-Host "==> Publish Screeni.App"
@@ -93,11 +85,6 @@ $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
 Copy-Item (Join-Path $Root "src\Screeni.App\Assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
 Get-ChildItem $PublishDir -Filter *.pdb -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
-
-if ($chocoJob) {
-    Write-Host "==> Waiting for Inno Setup install"
-    Receive-Job $chocoJob -Wait -AutoRemoveJob
-}
 
 $Iscc = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",

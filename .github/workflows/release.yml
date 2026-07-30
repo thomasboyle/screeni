@@ -10,8 +10,7 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    # Temporarily 2m to capture a full profile + warm caches; tighten after green.
-    timeout-minutes: 2
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v5
@@ -53,6 +52,9 @@ jobs:
         with:
           arch: x64
 
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
       - name: Build release
         shell: pwsh
         run: ./scripts/ci-release.ps1 -Version '${{ steps.version.outputs.version }}'
@@ -70,10 +72,11 @@ jobs:
           Write-Host "Artifact OK: $installer ($([math]::Round((Get-Item $installer).Length/1MB,1)) MB)"
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: Screeni v${{ steps.version.outputs.version }}
-          files: artifacts/installer/ScreeniSetup-${{ steps.version.outputs.version }}.exe
-          fail_on_unmatched_files: true
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $tag = "v$version"
+          $installer = "artifacts/installer/ScreeniSetup-$version.exe"
+          gh release create $tag $installer --title "Screeni $tag" --generate-notes
