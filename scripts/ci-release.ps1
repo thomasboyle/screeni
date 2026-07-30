@@ -18,6 +18,7 @@ $CoreSrc = Join-Path $Root "src\Screeni.Core"
 $CoreBuild = Join-Path $Root "build\Screeni.Core"
 $AppProj = Join-Path $Root "src\Screeni.App\Screeni.App.csproj"
 $PublishDir = Join-Path $Root "artifacts\publish"
+$PublishCache = Join-Path $Root "artifacts\ci-cache\publish"
 $InstallerDir = Join-Path $Root "artifacts\installer"
 $Iss = Join-Path $Root "installer\Screeni.iss"
 $CachedCoreDll = Join-Path $Root "artifacts\ci-cache\Screeni.Core.dll"
@@ -36,13 +37,6 @@ if ($needInno) {
         if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed: $LASTEXITCODE" }
     }
 }
-
-Write-Host "==> Restoring NuGet packages in background"
-$restoreJob = Start-Job -ScriptBlock {
-    param($Proj)
-    & dotnet restore $Proj -r win-x64 --verbosity minimal
-    if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed: $LASTEXITCODE" }
-} -ArgumentList $AppProj
 
 $CoreDll = $null
 if (Test-Path $CachedCoreDll) {
@@ -74,29 +68,35 @@ if (Test-Path $CachedCoreDll) {
     Copy-Item $CoreDll $CachedCoreDll -Force
 }
 
-Write-Host "==> Waiting for NuGet restore"
-Receive-Job $restoreJob -Wait -AutoRemoveJob
-
 $sw.Restart()
-Write-Host "==> Publish Screeni.App"
-if (Test-Path $PublishDir) {
-    Remove-Item $PublishDir -Recurse -Force
-}
-New-Item -ItemType Directory -Force -Path $PublishDir | Out-Null
+if (Test-Path (Join-Path $PublishCache "Screeni.App.exe")) {
+    Write-Host "==> Using cached publish output"
+    if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
+    New-Item -ItemType Directory -Force -Path (Split-Path $PublishDir) | Out-Null
+    Copy-Item $PublishCache $PublishDir -Recurse -Force
+    Write-Timing "dotnet publish (cached)" $sw
+} else {
+    Write-Host "==> Publish Screeni.App"
+    if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
+    New-Item -ItemType Directory -Force -Path $PublishDir | Out-Null
 
-dotnet publish $AppProj `
-    -c Release `
-    -r win-x64 `
-    --self-contained true `
-    --no-restore `
-    -p:Platform=x64 `
-    -p:PublishSingleFile=false `
-    -p:WindowsAppSDKSelfContained=false `
-    -p:DebugType=None `
-    -p:DebugSymbols=false `
-    -o $PublishDir
-if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
-Write-Timing "dotnet publish" $sw
+    dotnet publish $AppProj `
+        -c Release `
+        -r win-x64 `
+        --self-contained true `
+        -p:Platform=x64 `
+        -p:PublishSingleFile=false `
+        -p:WindowsAppSDKSelfContained=false `
+        -p:DebugType=None `
+        -p:DebugSymbols=false `
+        -o $PublishDir
+    if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+    Write-Timing "dotnet publish" $sw
+
+    if (Test-Path $PublishCache) { Remove-Item $PublishCache -Recurse -Force }
+    New-Item -ItemType Directory -Force -Path (Split-Path $PublishCache) | Out-Null
+    Copy-Item $PublishDir $PublishCache -Recurse -Force
+}
 
 Copy-Item $CoreDll (Join-Path $PublishDir "Screeni.Core.dll") -Force
 $AssetsDir = Join-Path $PublishDir "Assets"

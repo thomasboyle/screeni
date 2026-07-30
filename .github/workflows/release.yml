@@ -10,23 +10,26 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    timeout-minutes: 1
+    timeout-minutes: 2
 
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Compute next version
         id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
-          git fetch --tags --force
-          $parsed = git tag -l 'v*' | ForEach-Object {
-            $t = $_ -replace '^v', ''
-            if ($t -match '^(\d+\.\d+\.\d+)(?:-build\.\d+)?$') { $Matches[1] }
-          } | Where-Object { $_ }
-          if ($parsed) {
+          $tags = gh api "repos/$env:GITHUB_REPOSITORY/git/matching-refs/tags/v" --jq '.[].ref' 2>$null
+          $parsed = @()
+          foreach ($ref in $tags) {
+            $t = $ref -replace '^refs/tags/v', ''
+            if ($t -match '^(\d+\.\d+\.\d+)$') { $parsed += $Matches[1] }
+          }
+          if ($parsed.Count -gt 0) {
             $latest = $parsed | Sort-Object { [version]$_ } | Select-Object -Last 1
             $parts = $latest.Split('.')
             $next = '{0}.{1}.{2}' -f $parts[0], $parts[1], ([int]$parts[2] + 1)
@@ -38,10 +41,10 @@ jobs:
           Write-Host "Next version: $next"
 
       - uses: actions/cache@v4
+        id: publish-cache
         with:
-          path: ~/.nuget/packages
-          key: nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: nuget-
+          path: artifacts/ci-cache/publish
+          key: publish-${{ hashFiles('src/Screeni.App/**') }}
 
       - uses: actions/cache@v4
         id: core-dll
