@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/build/
+**/artifacts/
+**/installer/redist/
+**/.vs/
+*.user
+*.suo
+*.pdb
+src/Screeni.Core/third_party/sqlite_tmp/
+*.zip

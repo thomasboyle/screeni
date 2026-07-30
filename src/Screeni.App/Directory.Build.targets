@@ -1,0 +1,11 @@
+<Project>
+  <!-- Unpackaged WinUI builds need MRT for .xbf copy, but ExpandPriContent requires VS Appx tasks. -->
+  <PropertyGroup>
+    <AppxGeneratePriEnabled>false</AppxGeneratePriEnabled>
+    <AppxGeneratePrisForPortableLibrariesEnabled>false</AppxGeneratePrisForPortableLibrariesEnabled>
+    <AppxGetPackagePropertiesEnabled>false</AppxGetPackagePropertiesEnabled>
+  </PropertyGroup>
+
+  <Target Name="AddPriPayloadFilesToCopyToOutputDirectoryItems"
+          Condition="'$(AppxGeneratePriEnabled)' != 'false'" />
+</Project>
