@@ -10,7 +10,8 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    timeout-minutes: 1
+    # Steady-state (warm caches) ~40s. Cold rebuild after App/Core changes can take ~90s.
+    timeout-minutes: 2
 
     steps:
       - uses: actions/checkout@v5
