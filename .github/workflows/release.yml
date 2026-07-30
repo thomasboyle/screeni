@@ -10,7 +10,7 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    timeout-minutes: 2
+    timeout-minutes: 1
 
     steps:
       - uses: actions/checkout@v5
