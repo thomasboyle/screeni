@@ -10,7 +10,7 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    timeout-minutes: 1
+    timeout-minutes: 2
 
     steps:
       - uses: actions/checkout@v5
@@ -45,8 +45,8 @@ jobs:
 
       - uses: actions/cache@v4
         with:
-          path: build/Screeni.Core
-          key: core-${{ hashFiles('src/Screeni.Core/**') }}
+          path: artifacts/ci-cache/Screeni.Core.dll
+          key: core-dll-${{ hashFiles('src/Screeni.Core/**') }}
 
       - uses: TheMrMilchmann/setup-msvc-dev@v4
         with:

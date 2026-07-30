@@ -20,12 +20,9 @@ $AppProj = Join-Path $Root "src\Screeni.App\Screeni.App.csproj"
 $PublishDir = Join-Path $Root "artifacts\publish"
 $InstallerDir = Join-Path $Root "artifacts\installer"
 $Iss = Join-Path $Root "installer\Screeni.iss"
+$CachedCoreDll = Join-Path $Root "artifacts\ci-cache\Screeni.Core.dll"
 
 "#define MyAppVersion `"$Version`"" | Set-Content (Join-Path $Root "installer\ci-version.iss") -Encoding utf8NoBOM
-
-if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
-    throw "ninja not found on PATH (expected on windows-latest, as in Latenci CI)"
-}
 
 $needInno = -not (
     (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") -or
@@ -47,26 +44,34 @@ $restoreJob = Start-Job -ScriptBlock {
     if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed: $LASTEXITCODE" }
 } -ArgumentList $AppProj
 
-$ninjaFile = Join-Path $CoreBuild "build.ninja"
-if (-not (Test-Path $ninjaFile)) {
+$CoreDll = $null
+if (Test-Path $CachedCoreDll) {
+    Write-Host "==> Using cached Screeni.Core.dll"
+    $CoreDll = $CachedCoreDll
+    Write-Timing "core (cached dll)" $sw
+} else {
+    if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
+        throw "ninja not found on PATH (expected on windows-latest, as in Latenci CI)"
+    }
+
     Write-Host "==> Configure Screeni.Core (Ninja)"
     cmake -S $CoreSrc -B $CoreBuild -G Ninja -DCMAKE_BUILD_TYPE=Release
     if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
     Write-Timing "cmake configure" $sw
-} else {
-    Write-Host "==> Reusing cached Screeni.Core build directory"
-    Write-Timing "cmake configure (cached)" $sw
-}
 
-$sw.Restart()
-Write-Host "==> Build Screeni.Core"
-cmake --build $CoreBuild --parallel
-if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
-Write-Timing "core build" $sw
+    $sw.Restart()
+    Write-Host "==> Build Screeni.Core"
+    cmake --build $CoreBuild --parallel
+    if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
+    Write-Timing "core build" $sw
 
-$CoreDll = Join-Path $CoreBuild "bin\Screeni.Core.dll"
-if (-not (Test-Path $CoreDll)) {
-    throw "Screeni.Core.dll not found after build."
+    $CoreDll = Join-Path $CoreBuild "bin\Screeni.Core.dll"
+    if (-not (Test-Path $CoreDll)) {
+        throw "Screeni.Core.dll not found after build."
+    }
+
+    New-Item -ItemType Directory -Force -Path (Split-Path $CachedCoreDll) | Out-Null
+    Copy-Item $CoreDll $CachedCoreDll -Force
 }
 
 Write-Host "==> Waiting for NuGet restore"
