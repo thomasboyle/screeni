@@ -94,7 +94,7 @@ public sealed partial class MainWindow : Window
         WeekToggle.IsChecked = ViewModel.SelectedRange == DashboardRange.Week;
     }
 
-    private void SettingsButton_Click(object sender, RoutedEventArgs e) =>
+    private void SettingsNavButton_Click(object sender, RoutedEventArgs e) =>
         SettingsOverlay.Visibility = Visibility.Visible;
 
     private void CloseSettings_Click(object sender, RoutedEventArgs e) =>

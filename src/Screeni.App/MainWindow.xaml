@@ -5,244 +5,460 @@
     xmlns:vm="using:Screeni.ViewModels"
     Title="Screeni">
 
-    <Border Background="{StaticResource PageBackgroundBrush}"
-            BorderBrush="{StaticResource FrameBrush}"
-            BorderThickness="2">
+    <Border Background="{StaticResource PageBackgroundBrush}">
         <Grid>
-            <Grid Padding="26,18,26,16" RowSpacing="14">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="212" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="242" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0" Background="{StaticResource SidebarBackgroundBrush}">
+                <Canvas IsHitTestVisible="False"
+                        Width="242"
+                        Height="180"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Bottom">
+                    <Path Fill="{StaticResource PlantLightBrush}"
+                          Data="M0,160 C42,146 87,145 125,154 C165,163 205,153 242,132 L242,180 L0,180 Z" />
+                    <Path Fill="{StaticResource PlantMidBrush}"
+                          Data="M0,176 C41,155 75,158 116,168 C158,179 194,168 242,153 L242,180 L0,180 Z" />
+                    <Path Fill="{StaticResource PlantDarkBrush}"
+                          Data="M27,180 C31,154 31,126 20,101 C43,114 54,137 49,180 Z" />
+                    <Path Fill="{StaticResource PlantMidBrush}"
+                          Data="M29,141 C9,126 0,105 1,82 C22,91 35,111 35,133 Z" />
+                    <Path Fill="{StaticResource PlantDarkBrush}"
+                          Data="M37,153 C52,130 72,117 91,119 C86,143 66,157 44,165 Z" />
+                    <Path Fill="{StaticResource PlantLightBrush}"
+                          Data="M39,115 C27,93 28,74 38,59 C54,75 57,95 48,116 Z" />
+                    <Path Fill="{StaticResource PlantMidBrush}"
+                          Data="M179,180 C184,157 183,137 175,120 C197,130 207,153 200,180 Z" />
+                    <Path Fill="{StaticResource PlantLightBrush}"
+                          Data="M186,143 C181,122 187,105 202,95 C211,116 205,134 190,147 Z" />
+                    <Path Fill="{StaticResource PlantMidBrush}"
+                          Data="M187,161 C205,143 222,138 239,145 C229,163 211,170 191,170 Z" />
+                </Canvas>
 
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <Image Source="ms-appx:///Assets/Sprites/sprout.png"
-                                   Width="30"
-                                   Height="36"
-                                   Stretch="Uniform"
-                                   VerticalAlignment="Center" />
-                            <TextBlock Text="Screeni" Style="{StaticResource DisplayTitleTextStyle}" />
-                        </StackPanel>
-                        <TextBlock Text="{x:Bind ViewModel.TodayTotalText, Mode=OneWay}"
-                                   Style="{StaticResource MutedTextStyle}"
-                                   FontSize="17"
-                                   Margin="2,2,0,0" />
-                    </StackPanel>
-
-                    <Button Grid.Column="1"
-                            Style="{StaticResource PixelButtonStyle}"
-                            Click="SettingsButton_Click"
-                            VerticalAlignment="Top"
-                            Padding="14,7">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Image Source="ms-appx:///Assets/Sprites/gear.png"
-                                   Width="17"
-                                   Height="17"
-                                   Stretch="Uniform"
-                                   VerticalAlignment="Center" />
-                            <TextBlock Text="Settings"
-                                       FontFamily="{StaticResource PixelFont}"
-                                       FontSize="16"
-                                       Foreground="{StaticResource InkBrush}"
-                                       VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
-                <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <ToggleButton x:Name="DayToggle"
-                                      Content="Day"
-                                      Style="{StaticResource PixelToggleStyle}"
-                                      Click="DayButton_Click" />
-                        <ToggleButton x:Name="WeekToggle"
-                                      Content="Week"
-                                      Style="{StaticResource PixelToggleStyle}"
-                                      Click="WeekButton_Click" />
-                    </StackPanel>
-
-                    <TextBlock Grid.Column="1"
-                               Text="{x:Bind ViewModel.RangeLabel, Mode=OneWay}"
-                               HorizontalAlignment="Right"
-                               VerticalAlignment="Center"
-                               FontSize="20"
-                               Foreground="{StaticResource InkMutedBrush}" />
-                </Grid>
-
-                <Border Grid.Row="2"
-                        Background="{StaticResource SurfaceBrush}"
-                        BorderBrush="{StaticResource BorderSoftBrush}"
-                        BorderThickness="2"
-                        CornerRadius="6"
-                        Padding="14,12">
-                    <Grid>
-                        <ItemsRepeater ItemsSource="{x:Bind ViewModel.Bars, Mode=OneWay}">
-                            <ItemsRepeater.Layout>
-                                <UniformGridLayout x:Name="ChartLayout"
-                                                   Orientation="Horizontal"
-                                                   MinItemWidth="6"
-                                                   MinRowSpacing="0"
-                                                   MinColumnSpacing="0"
-                                                   MaximumRowsOrColumns="24"
-                                                   ItemsStretch="Fill" />
-                            </ItemsRepeater.Layout>
-                            <ItemsRepeater.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ChartBar">
-                                    <Grid ToolTipService.ToolTip="{x:Bind Tooltip}">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="150" />
-                                            <RowDefinition Height="9" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-
-                                        <Rectangle VerticalAlignment="Bottom"
-                                                   HorizontalAlignment="Center"
-                                                   Width="{x:Bind BarWidth}"
-                                                   Height="{x:Bind BarHeight}"
-                                                   Fill="{StaticResource AccentBrush}" />
-
-                                        <Image Grid.Row="1"
-                                               Source="ms-appx:///Assets/Sprites/dash.png"
-                                               Height="3"
-                                               Stretch="Fill"
-                                               VerticalAlignment="Center" />
-
-                                        <TextBlock Grid.Row="2"
-                                                   Text="{x:Bind Label}"
-                                                   Style="{StaticResource AxisTextStyle}"
-                                                   HorizontalAlignment="Center" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsRepeater.ItemTemplate>
-                        </ItemsRepeater>
-
-                        <Image Source="ms-appx:///Assets/Sprites/sprig.png"
-                               Width="60"
-                               Height="60"
-                               Stretch="Uniform"
-                               HorizontalAlignment="Right"
-                               VerticalAlignment="Top"
-                               Margin="0,2,2,0" />
-                    </Grid>
-                </Border>
-
-                <Grid Grid.Row="3" RowSpacing="8">
+                <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <StackPanel HorizontalAlignment="Left" Spacing="4">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Image Source="ms-appx:///Assets/Sprites/leaf.png"
-                                   Width="36"
-                                   Height="32"
-                                   Stretch="Uniform"
+                    <StackPanel Grid.Row="0"
+                                Orientation="Horizontal"
+                                Margin="29,31,0,0"
+                                Height="39"
+                                Spacing="10">
+                        <Canvas Width="34" Height="37" VerticalAlignment="Center">
+                            <Path Fill="{StaticResource PlantDarkBrush}"
+                                  Data="M3,29 H32 V36 H3 Z M14,30 C14,22 11,17 6,14 C8,8 14,8 18,13 C18,6 24,2 29,5 C31,12 27,18 20,20 C23,24 23,28 23,31 Z" />
+                            <Path Fill="{StaticResource PlantMidBrush}"
+                                  Data="M4,13 C2,7 6,3 12,4 C16,8 14,14 9,17 Z M19,13 C19,6 24,2 30,5 C31,12 26,16 20,18 Z" />
+                        </Canvas>
+                        <TextBlock Text="Screeni"
+                                   Style="{StaticResource DisplayTitleTextStyle}"
                                    VerticalAlignment="Center" />
-                            <TextBlock Text="Apps"
-                                       Style="{StaticResource SectionTitleTextStyle}"
-                                       VerticalAlignment="Center" />
-                        </StackPanel>
-                        <Image Source="ms-appx:///Assets/Sprites/dash-soft.png"
-                               Height="2"
-                               Stretch="Fill" />
                     </StackPanel>
 
-                    <ListView Grid.Row="1"
-                              ItemsSource="{x:Bind ViewModel.Apps, Mode=OneWay}"
-                              SelectionMode="None"
-                              Background="Transparent"
-                              Padding="0"
-                              ItemContainerStyle="{StaticResource AppRowContainerStyle}">
-                        <ListView.ItemTemplate>
-                            <DataTemplate x:DataType="vm:AppUsageItem">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
+                    <Border Grid.Row="1"
+                            Height="137"
+                            Margin="19,37,19,0"
+                            Padding="20,18"
+                            Background="{StaticResource SurfaceBrush}"
+                            BorderBrush="{StaticResource BorderSoftBrush}"
+                            BorderThickness="1"
+                            CornerRadius="11">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="❧"
+                                           FontFamily="Segoe UI Symbol"
+                                           FontSize="13"
+                                           Foreground="{StaticResource PlantDarkBrush}"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="Total Screen Time"
+                                           Style="{StaticResource MutedTextStyle}"
+                                           FontSize="13" />
+                            </StackPanel>
+                            <TextBlock Text="{x:Bind ViewModel.TodayTotalText, Mode=OneWay}"
+                                       FontFamily="{StaticResource AppFont}"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource InkBrush}"
+                                       Margin="0,12,0,0" />
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="7"
+                                        Margin="0,10,0,0">
+                                <SymbolIcon Symbol="Calendar"
+                                            Width="16"
+                                            Height="16"
+                                            Foreground="{StaticResource InkMutedBrush}" />
+                                <TextBlock Text="Today"
+                                           Style="{StaticResource MutedTextStyle}"
+                                           FontSize="13" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
 
-                                    <Grid Height="54" ColumnSpacing="14">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Row="2"
+                                Margin="19,20,19,0"
+                                Spacing="4">
+                        <Button x:Name="OverviewNav"
+                                Height="45"
+                                Style="{StaticResource NavButtonStyle}"
+                                Background="{StaticResource AccentFillBrush}">
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <SymbolIcon Symbol="Home"
+                                            Width="20"
+                                            Height="20"
+                                            Foreground="{StaticResource InkBrush}" />
+                                <TextBlock Text="Overview"
+                                           Style="{StaticResource BodyTextStyle}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Height="45"
+                                Style="{StaticResource NavButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <SymbolIcon Symbol="FourBars"
+                                            Width="20"
+                                            Height="20"
+                                            Foreground="{StaticResource InkMutedBrush}" />
+                                <TextBlock Text="Insights"
+                                           Style="{StaticResource BodyTextStyle}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Height="45"
+                                Style="{StaticResource NavButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <SymbolIcon Symbol="ViewAll"
+                                            Width="20"
+                                            Height="20"
+                                            Foreground="{StaticResource InkMutedBrush}" />
+                                <TextBlock Text="Apps"
+                                           Style="{StaticResource BodyTextStyle}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Height="45"
+                                Style="{StaticResource NavButtonStyle}"
+                                Click="SettingsNavButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <SymbolIcon Symbol="Setting"
+                                            Width="20"
+                                            Height="20"
+                                            Foreground="{StaticResource InkMutedBrush}" />
+                                <TextBlock Text="Settings"
+                                           Style="{StaticResource BodyTextStyle}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
 
-                                        <Border Width="42"
-                                                Height="42"
-                                                Background="{StaticResource AccentFillBrush}"
-                                                BorderBrush="{StaticResource AccentBorderBrush}"
-                                                BorderThickness="2"
-                                                CornerRadius="5"
-                                                VerticalAlignment="Center">
-                                            <Grid>
-                                                <Image Source="{x:Bind Icon}"
-                                                       Visibility="{x:Bind IconVisibility}"
-                                                       Width="24"
-                                                       Height="24"
-                                                       Stretch="Uniform" />
-                                                <TextBlock Text="{x:Bind Initial}"
-                                                           Visibility="{x:Bind InitialVisibility}"
-                                                           FontFamily="{StaticResource PixelFont}"
-                                                           FontSize="20"
-                                                           HorizontalAlignment="Center"
+                <Rectangle Width="1"
+                           HorizontalAlignment="Right"
+                           Fill="{StaticResource FrameBrush}"
+                           IsHitTestVisible="False" />
+            </Grid>
+
+            <Grid Grid.Column="1" Background="{StaticResource PageBackgroundBrush}">
+                <Grid Padding="31,34,35,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="29" />
+                        <RowDefinition Height="54" />
+                        <RowDefinition Height="278" />
+                        <RowDefinition Height="296" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="Overview"
+                               Style="{StaticResource DisplayTitleTextStyle}"
+                               FontSize="20"
+                               VerticalAlignment="Top" />
+
+                    <Grid Grid.Row="1" Margin="0,20,0,0" Height="34">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <ToggleButton x:Name="DayToggle"
+                                          Content="Day"
+                                          Width="68"
+                                          Height="34"
+                                          Style="{StaticResource PixelToggleStyle}"
+                                          Click="DayButton_Click" />
+                            <ToggleButton x:Name="WeekToggle"
+                                          Content="Week"
+                                          Width="73"
+                                          Height="34"
+                                          Style="{StaticResource PixelToggleStyle}"
+                                          Click="WeekButton_Click" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Spacing="9">
+                            <Button Width="129"
+                                    Height="34"
+                                    Style="{StaticResource PixelButtonStyle}">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <SymbolIcon Symbol="Calendar"
+                                                Width="16"
+                                                Height="16"
+                                                Foreground="{StaticResource InkMutedBrush}" />
+                                    <TextBlock Text="Today"
+                                               Style="{StaticResource BodyTextStyle}"
+                                               VerticalAlignment="Center" />
+                                    <SymbolIcon Symbol="ChevronDown"
+                                                Width="12"
+                                                Height="12"
+                                                Foreground="{StaticResource InkMutedBrush}"
+                                                Margin="7,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <StackPanel Orientation="Horizontal" Spacing="0">
+                                <Button Width="38"
+                                        Height="34"
+                                        Style="{StaticResource PixelButtonStyle}">
+                                    <SymbolIcon Symbol="ChevronLeft"
+                                                Width="14"
+                                                Height="14"
+                                                Foreground="{StaticResource InkBrush}" />
+                                </Button>
+                                <Button Width="38"
+                                        Height="34"
+                                        Style="{StaticResource PixelButtonStyle}">
+                                    <SymbolIcon Symbol="ChevronRight"
+                                                Width="14"
+                                                Height="14"
+                                                Foreground="{StaticResource InkBrush}" />
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Grid.Row="2"
+                            Height="242"
+                            Margin="0,15,0,0"
+                            Background="{StaticResource SurfaceBrush}"
+                            BorderBrush="{StaticResource BorderSoftBrush}"
+                            BorderThickness="1"
+                            CornerRadius="11">
+                        <Grid>
+                            <TextBlock Text="Screen Time"
+                                       Style="{StaticResource SectionTitleTextStyle}"
+                                       Margin="22,18,0,0"
+                                       VerticalAlignment="Top" />
+
+                            <Canvas Width="52"
+                                    Height="51"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,12,18,0"
+                                    IsHitTestVisible="False">
+                                <Path Fill="{StaticResource PlantMidBrush}"
+                                      Data="M25,48 C25,31 27,17 34,3 C36,20 32,35 27,48 Z" />
+                                <Path Fill="{StaticResource PlantLightBrush}"
+                                      Data="M31,22 C31,11 38,5 49,5 C47,16 41,22 31,25 Z" />
+                                <Path Fill="{StaticResource PlantMidBrush}"
+                                      Data="M27,31 C17,22 8,22 2,27 C8,37 18,39 29,36 Z" />
+                                <Path Fill="{StaticResource PlantLightBrush}"
+                                      Data="M33,14 C25,5 17,5 12,10 C17,19 25,21 34,19 Z" />
+                                <Path Fill="{StaticResource PlantDarkBrush}"
+                                      Data="M27,43 C37,34 45,34 51,39 C45,48 36,50 27,48 Z" />
+                            </Canvas>
+
+                            <Grid Margin="22,47,17,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="36" />
+                                </Grid.ColumnDefinitions>
+
+                                <Grid Grid.Column="0">
+                                    <Border Height="1"
+                                            VerticalAlignment="Top"
+                                            Margin="0,25,0,0"
+                                            Background="{StaticResource DashSoftBrush}" />
+                                    <Border Height="1"
+                                            VerticalAlignment="Top"
+                                            Margin="0,85,0,0"
+                                            Background="{StaticResource DashSoftBrush}" />
+                                    <Border Height="1"
+                                            VerticalAlignment="Top"
+                                            Margin="0,145,0,0"
+                                            Background="{StaticResource BorderStrongBrush}" />
+
+                                    <ItemsRepeater ItemsSource="{x:Bind ViewModel.Bars, Mode=OneWay}">
+                                        <ItemsRepeater.Layout>
+                                            <UniformGridLayout x:Name="ChartLayout"
+                                                               Orientation="Horizontal"
+                                                               MinItemWidth="6"
+                                                               MinRowSpacing="0"
+                                                               MinColumnSpacing="0"
+                                                               MaximumRowsOrColumns="24"
+                                                               ItemsStretch="Fill" />
+                                        </ItemsRepeater.Layout>
+                                        <ItemsRepeater.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ChartBar">
+                                                <Grid ToolTipService.ToolTip="{x:Bind Tooltip}">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="150" />
+                                                        <RowDefinition Height="9" />
+                                                        <RowDefinition Height="18" />
+                                                    </Grid.RowDefinitions>
+
+                                                    <Rectangle VerticalAlignment="Bottom"
+                                                               HorizontalAlignment="Center"
+                                                               Width="{x:Bind BarWidth}"
+                                                               Height="{x:Bind BarHeight}"
+                                                               Fill="{StaticResource AccentBrush}" />
+                                                    <Rectangle Grid.Row="1"
+                                                               Height="1"
+                                                               Margin="0,4,0,4"
+                                                               Fill="{StaticResource BorderStrongBrush}" />
+                                                    <TextBlock Grid.Row="2"
+                                                               Text="{x:Bind Label}"
+                                                               Style="{StaticResource AxisTextStyle}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Top" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsRepeater.ItemTemplate>
+                                    </ItemsRepeater>
+                                    <TextBlock Text="24"
+                                               Style="{StaticResource AxisTextStyle}"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Bottom"
+                                               Margin="0,0,0,0" />
+                                </Grid>
+
+                                <Canvas Grid.Column="1"
+                                        Height="150"
+                                        VerticalAlignment="Top"
+                                        Margin="0,25,0,0">
+                                    <TextBlock Text="60m"
+                                               Style="{StaticResource AxisTextStyle}"
+                                               Canvas.Top="-7"
+                                               HorizontalAlignment="Right" />
+                                    <TextBlock Text="30m"
+                                               Style="{StaticResource AxisTextStyle}"
+                                               Canvas.Top="53"
+                                               HorizontalAlignment="Right" />
+                                    <TextBlock Text="0m"
+                                               Style="{StaticResource AxisTextStyle}"
+                                               Canvas.Top="113"
+                                               HorizontalAlignment="Right" />
+                                </Canvas>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="3"
+                            Height="296"
+                            Margin="0,0,0,0"
+                            Background="{StaticResource SurfaceBrush}"
+                            BorderBrush="{StaticResource BorderSoftBrush}"
+                            BorderThickness="1"
+                            CornerRadius="11">
+                        <Grid>
+                            <Grid Height="59"
+                                  Padding="19,0,16,0"
+                                  VerticalAlignment="Top">
+                                <TextBlock Text="Top Apps"
+                                           Style="{StaticResource SectionTitleTextStyle}"
+                                           VerticalAlignment="Center" />
+                                <Button Width="85"
+                                        Height="33"
+                                        HorizontalAlignment="Right"
+                                        Style="{StaticResource PixelButtonStyle}">
+                                    <TextBlock Text="Show all"
+                                               Style="{StaticResource BodyTextStyle}"
+                                               VerticalAlignment="Center" />
+                                </Button>
+                            </Grid>
+
+                            <ListView ItemsSource="{x:Bind ViewModel.Apps, Mode=OneWay}"
+                                      Margin="0,59,0,0"
+                                      SelectionMode="None"
+                                      Background="Transparent"
+                                      Padding="0"
+                                      ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                                      ItemContainerStyle="{StaticResource AppRowContainerStyle}">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:AppUsageItem">
+                                        <Border Height="44"
+                                                BorderBrush="{StaticResource BorderSoftBrush}"
+                                                BorderThickness="0,1,0,0">
+                                            <Grid Height="44"
+                                                  Margin="24,0,21,0"
+                                                  ColumnSpacing="14">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="28" />
+                                                    <ColumnDefinition Width="82" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="60" />
+                                                    <ColumnDefinition Width="18" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border Width="28"
+                                                        Height="28"
+                                                        Background="{StaticResource AccentFillBrush}"
+                                                        BorderBrush="{StaticResource AccentBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        VerticalAlignment="Center">
+                                                    <Grid>
+                                                        <Image Source="{x:Bind Icon}"
+                                                               Visibility="{x:Bind IconVisibility}"
+                                                               Width="25"
+                                                               Height="25"
+                                                               Stretch="Uniform" />
+                                                        <TextBlock Text="{x:Bind Initial}"
+                                                                   Visibility="{x:Bind InitialVisibility}"
+                                                                   FontFamily="{StaticResource AppFont}"
+                                                                   FontSize="15"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{StaticResource InkBrush}" />
+                                                    </Grid>
+                                                </Border>
+
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{x:Bind Name}"
+                                                           Style="{StaticResource BodyTextStyle}"
                                                            VerticalAlignment="Center"
-                                                           Foreground="{StaticResource InkBrush}" />
+                                                           TextTrimming="CharacterEllipsis" />
+
+                                                <ProgressBar Grid.Column="2"
+                                                             Style="{StaticResource PixelBarStyle}"
+                                                             Value="{x:Bind Share}"
+                                                             VerticalAlignment="Center" />
+
+                                                <TextBlock Grid.Column="3"
+                                                           Text="{x:Bind DurationText}"
+                                                           Style="{StaticResource MutedTextStyle}"
+                                                           FontSize="13"
+                                                           TextAlignment="Right"
+                                                           VerticalAlignment="Center" />
+
+                                                <SymbolIcon Grid.Column="4"
+                                                            Symbol="ChevronRight"
+                                                            Width="14"
+                                                            Height="14"
+                                                            Foreground="{StaticResource InkMutedBrush}"
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>
-
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{x:Bind Name}"
-                                                   FontFamily="{StaticResource PixelFont}"
-                                                   FontSize="16"
-                                                   Foreground="{StaticResource InkBrush}"
-                                                   VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   MaxWidth="320" />
-
-                                        <ProgressBar Grid.Column="2"
-                                                     Style="{StaticResource PixelBarStyle}"
-                                                     Value="{x:Bind Share}"
-                                                     Margin="0,0,14,0" />
-
-                                        <TextBlock Grid.Column="3"
-                                                   Text="{x:Bind DurationText}"
-                                                   Style="{StaticResource MutedTextStyle}"
-                                                   FontSize="16"
-                                                   MinWidth="58"
-                                                   TextAlignment="Right"
-                                                   VerticalAlignment="Center" />
-                                    </Grid>
-
-                                    <Image Grid.Row="1"
-                                           Source="ms-appx:///Assets/Sprites/dash-soft.png"
-                                           Height="2"
-                                           Stretch="Fill" />
-                                </Grid>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Grid>
 
             <Button x:Name="UpdateBubble"
-                    Grid.RowSpan="4"
+                    Grid.ColumnSpan="2"
                     Width="330"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Bottom"
@@ -268,23 +484,23 @@
             </Button>
 
             <Grid x:Name="SettingsOverlay"
+                  Grid.ColumnSpan="2"
                   Visibility="Collapsed"
-                  Background="#7A4A452F"
-                  Tapped="SettingsScrim_Tapped">
+                  Background="#45000000"
+                  Tapped="SettingsScrim_Tapped"
+                  Canvas.ZIndex="4">
                 <Border Width="340"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
-                        Margin="0,74,26,0"
+                        Margin="0,34,35,0"
                         Padding="20,18"
                         Background="{StaticResource SurfaceBrush}"
                         BorderBrush="{StaticResource BorderStrongBrush}"
-                        BorderThickness="2"
-                        CornerRadius="4">
+                        BorderThickness="1"
+                        CornerRadius="10">
                     <StackPanel Spacing="14">
                         <TextBlock Text="Settings" Style="{StaticResource SectionTitleTextStyle}" />
-                        <Image Source="ms-appx:///Assets/Sprites/dash-soft.png"
-                               Height="2"
-                               Stretch="Fill" />
+                        <Border Height="1" Background="{StaticResource DashSoftBrush}" />
 
                         <CheckBox Content="Start with Windows"
                                   Style="{StaticResource PixelCheckBoxStyle}"
@@ -295,7 +511,7 @@
                         <NumberBox Value="{x:Bind ViewModel.IdleThresholdSec, Mode=TwoWay}"
                                    Minimum="15"
                                    Maximum="3600"
-                                   FontFamily="{StaticResource PixelFont}"
+                                   FontFamily="{StaticResource AppFont}"
                                    SpinButtonPlacementMode="Inline" />
 
                         <Button Content="Apply"

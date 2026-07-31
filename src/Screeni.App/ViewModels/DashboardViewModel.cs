@@ -170,7 +170,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
                 total <= 0 ? 0 : (double)app.DurationMs / total,
                 AppIconService.GetIcon(app.ExePath)));
         }
-        Apps = appItems;
+        Apps = appItems.Take(5).ToList();
     }
 
     public void DisposeTimer() => _timer.Stop();

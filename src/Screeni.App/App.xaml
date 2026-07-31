@@ -8,63 +8,69 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <FontFamily x:Key="PixelFont">ms-appx:///Assets/Fonts/Monocraft.ttf#Monocraft</FontFamily>
+            <FontFamily x:Key="AppFont">Segoe UI Variable Text</FontFamily>
+            <FontFamily x:Key="PixelFont">Segoe UI Variable Text</FontFamily>
 
-            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F7EFDC" />
-            <SolidColorBrush x:Key="SurfaceBrush" Color="#FCF5E8" />
-            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F2E9D3" />
-            <SolidColorBrush x:Key="SurfacePressedBrush" Color="#EADFC5" />
-            <SolidColorBrush x:Key="FrameBrush" Color="#A79A86" />
-            <SolidColorBrush x:Key="InkBrush" Color="#474E2F" />
-            <SolidColorBrush x:Key="InkMutedBrush" Color="#6C7052" />
-            <SolidColorBrush x:Key="BorderSoftBrush" Color="#BEB6A2" />
-            <SolidColorBrush x:Key="BorderStrongBrush" Color="#8A8C6B" />
-            <SolidColorBrush x:Key="AccentBrush" Color="#A0A773" />
-            <SolidColorBrush x:Key="AccentFillBrush" Color="#C1C79E" />
-            <SolidColorBrush x:Key="AccentFillHoverBrush" Color="#B6BD92" />
-            <SolidColorBrush x:Key="AccentBorderBrush" Color="#7E8A5C" />
-            <SolidColorBrush x:Key="DashBrush" Color="#98A075" />
-            <SolidColorBrush x:Key="DashSoftBrush" Color="#C7C0AA" />
-
-            <x:Double x:Key="PixelBorderThickness">2</x:Double>
+            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#FCFBF6" />
+            <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F8F8F0" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFDF9" />
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F3F4E9" />
+            <SolidColorBrush x:Key="SurfacePressedBrush" Color="#E9EBD8" />
+            <SolidColorBrush x:Key="FrameBrush" Color="#DEDCCF" />
+            <SolidColorBrush x:Key="InkBrush" Color="#34412D" />
+            <SolidColorBrush x:Key="InkMutedBrush" Color="#7B806F" />
+            <SolidColorBrush x:Key="BorderSoftBrush" Color="#E4E2D7" />
+            <SolidColorBrush x:Key="BorderStrongBrush" Color="#C9CBB8" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#9AA574" />
+            <SolidColorBrush x:Key="AccentFillBrush" Color="#E8E9D6" />
+            <SolidColorBrush x:Key="AccentFillHoverBrush" Color="#DDE1C6" />
+            <SolidColorBrush x:Key="AccentBorderBrush" Color="#899563" />
+            <SolidColorBrush x:Key="DashBrush" Color="#A7AF85" />
+            <SolidColorBrush x:Key="DashSoftBrush" Color="#E2E2D6" />
+            <SolidColorBrush x:Key="PlantLightBrush" Color="#D7DEC0" />
+            <SolidColorBrush x:Key="PlantMidBrush" Color="#B9C695" />
+            <SolidColorBrush x:Key="PlantDarkBrush" Color="#9DAC75" />
 
             <Style x:Key="BodyTextStyle" TargetType="TextBlock">
-                <Setter Property="FontFamily" Value="{StaticResource PixelFont}" />
-                <Setter Property="FontSize" Value="15" />
+                <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+                <Setter Property="FontSize" Value="14" />
                 <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
             </Style>
 
             <Style x:Key="DisplayTitleTextStyle" TargetType="TextBlock">
-                <Setter Property="FontFamily" Value="{StaticResource PixelFont}" />
-                <Setter Property="FontSize" Value="46" />
+                <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+                <Setter Property="FontSize" Value="30" />
+                <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
-                <Setter Property="LineHeight" Value="50" />
             </Style>
 
             <Style x:Key="SectionTitleTextStyle" TargetType="TextBlock">
-                <Setter Property="FontFamily" Value="{StaticResource PixelFont}" />
-                <Setter Property="FontSize" Value="22" />
+                <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
             </Style>
 
             <Style x:Key="MutedTextStyle" TargetType="TextBlock">
-                <Setter Property="FontFamily" Value="{StaticResource PixelFont}" />
-                <Setter Property="FontSize" Value="15" />
+                <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+                <Setter Property="FontSize" Value="14" />
                 <Setter Property="Foreground" Value="{StaticResource InkMutedBrush}" />
             </Style>
 
             <Style x:Key="AxisTextStyle" TargetType="TextBlock">
-                <Setter Property="FontFamily" Value="{StaticResource PixelFont}" />
-                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+                <Setter Property="FontSize" Value="12" />
                 <Setter Property="Foreground" Value="{StaticResource InkMutedBrush}" />
             </Style>
 
-            <!-- Chunky bordered button with a flat pixel silhouette. -->
             <Style x:Key="PixelButtonStyle" TargetType="Button">
-                <Setter Property="FontFamily" Value="{StaticResource PixelFont}" />
-                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+                <Setter Property="FontSize" Value="14" />
                 <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
-                <Setter Property="Padding" Value="14,6" />
+                <Setter Property="Padding" Value="12,6" />
+                <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource BorderSoftBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
@@ -98,8 +104,8 @@
                                 <Border x:Name="Shell"
                                         Background="{StaticResource SurfaceBrush}"
                                         BorderBrush="{StaticResource BorderSoftBrush}"
-                                        BorderThickness="2"
-                                        CornerRadius="3">
+                                        BorderThickness="1"
+                                        CornerRadius="7">
                                     <ContentPresenter x:Name="Presenter"
                                                       Padding="{TemplateBinding Padding}"
                                                       Content="{TemplateBinding Content}"
@@ -115,11 +121,14 @@
 
             <!-- Segmented range selector: filled sage when checked, cream when not. -->
             <Style x:Key="PixelToggleStyle" TargetType="ToggleButton">
-                <Setter Property="FontFamily" Value="{StaticResource PixelFont}" />
-                <Setter Property="FontSize" Value="17" />
+                <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+                <Setter Property="FontSize" Value="14" />
                 <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
-                <Setter Property="Padding" Value="18,5" />
-                <Setter Property="MinWidth" Value="112" />
+                <Setter Property="Padding" Value="12,5" />
+                <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource BorderSoftBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="MinWidth" Value="0" />
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="Template">
@@ -170,10 +179,54 @@
                                 <Border x:Name="Shell"
                                         Background="{StaticResource SurfaceBrush}"
                                         BorderBrush="{StaticResource BorderSoftBrush}"
-                                        BorderThickness="2"
-                                        CornerRadius="3">
+                                        BorderThickness="1"
+                                        CornerRadius="6">
                                     <ContentPresenter x:Name="Presenter"
                                                       Padding="{TemplateBinding Padding}"
+                                                      Content="{TemplateBinding Content}"
+                                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="NavButtonStyle" TargetType="Button">
+                <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Padding" Value="14,0" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid>
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="Shell.Background" Value="{StaticResource SurfaceHoverBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="Shell.Background" Value="{StaticResource SurfacePressedBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+
+                                <Border x:Name="Shell"
+                                        Background="{TemplateBinding Background}"
+                                        CornerRadius="8">
+                                    <ContentPresenter Padding="{TemplateBinding Padding}"
                                                       Content="{TemplateBinding Content}"
                                                       ContentTemplate="{TemplateBinding ContentTemplate}"
                                                       HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -194,9 +247,8 @@
                 <Setter Property="VerticalContentAlignment" Value="Stretch" />
             </Style>
 
-            <!-- Flat usage bar: no track, square ends, sage fill. -->
             <Style x:Key="PixelBarStyle" TargetType="ProgressBar">
-                <Setter Property="Height" Value="9" />
+                <Setter Property="Height" Value="4" />
                 <Setter Property="Minimum" Value="0" />
                 <Setter Property="Maximum" Value="1" />
                 <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
@@ -208,8 +260,8 @@
             </Style>
 
             <Style x:Key="PixelCheckBoxStyle" TargetType="CheckBox">
-                <Setter Property="FontFamily" Value="{StaticResource PixelFont}" />
-                <Setter Property="FontSize" Value="15" />
+                <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+                <Setter Property="FontSize" Value="14" />
                 <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
                 <Setter Property="MinWidth" Value="0" />
                 <Setter Property="MinHeight" Value="0" />
