@@ -10,8 +10,8 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    # Steady-state (warm caches) ~40s. Cold rebuild after App/Core changes can take ~90s.
-    timeout-minutes: 2
+    # Maximum LZMA2 compression takes longer than the previous ZIP packaging.
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v5

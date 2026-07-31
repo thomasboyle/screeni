@@ -11,7 +11,6 @@ $AppProj = Join-Path $Root "src\Screeni.App\Screeni.App.csproj"
 $PublishDir = Join-Path $Root "artifacts\publish"
 $InstallerDir = Join-Path $Root "artifacts\installer"
 $Iss = Join-Path $Root "installer\Screeni.iss"
-$Redist = Join-Path $Root "installer\redist\WindowsAppRuntimeInstall-x64.exe"
 
 Write-Host "==> Building Screeni.Core ($Configuration)"
 cmake -S $CoreSrc -B $CoreBuild -G "Visual Studio 17 2022" -A x64 | Out-Host
@@ -25,13 +24,7 @@ if (-not (Test-Path $CoreDll)) {
     throw "Screeni.Core.dll not found after build."
 }
 
-if (-not (Test-Path $Redist)) {
-    Write-Host "==> Downloading Windows App Runtime 1.6 redistributable"
-    New-Item -ItemType Directory -Force -Path (Split-Path $Redist) | Out-Null
-    Invoke-WebRequest -Uri "https://aka.ms/windowsappsdk/1.6/1.6.250602001/windowsappruntimeinstall-x64.exe" -OutFile $Redist
-}
-
-Write-Host "==> Publishing Screeni.App (self-contained .NET, framework WASDK)"
+Write-Host "==> Publishing Screeni.App (trimmed self-contained .NET, framework WASDK)"
 if (Test-Path $PublishDir) {
     Remove-Item $PublishDir -Recurse -Force
 }
@@ -43,6 +36,10 @@ dotnet publish $AppProj `
     --self-contained true `
     -p:Platform=x64 `
     -p:PublishSingleFile=false `
+    -p:PublishTrimmed=true `
+    -p:TrimMode=partial `
+    -p:DebugType=None `
+    -p:DebugSymbols=false `
     -p:WindowsAppSDKSelfContained=false `
     -o $PublishDir | Out-Host
 
@@ -85,6 +82,13 @@ Write-Host "==> Compiling Inno Setup installer"
 $Setup = Get-ChildItem $InstallerDir -Filter "ScreeniSetup-*.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $Setup) {
     throw "Installer output not found in $InstallerDir"
+}
+
+$installerSize = (Get-Item $Setup).Length
+$maxInstallerSize = 20MB
+Write-Host ("Installer size: {0:n1} MB" -f ($installerSize / 1MB))
+if ($installerSize -gt $maxInstallerSize) {
+    throw "Installer exceeds the 20 MB limit: $([math]::Round($installerSize / 1MB, 1)) MB"
 }
 
 Write-Host "Installer ready: $($Setup.FullName)"

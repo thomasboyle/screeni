@@ -86,6 +86,8 @@ if (Test-Path (Join-Path $PublishCache "Screeni.App.exe")) {
         --self-contained true `
         -p:Platform=x64 `
         -p:PublishSingleFile=false `
+        -p:PublishTrimmed=true `
+        -p:TrimMode=partial `
         -p:WindowsAppSDKSelfContained=false `
         -p:DebugType=None `
         -p:DebugSymbols=false `
@@ -129,6 +131,13 @@ Write-Timing "inno setup" $sw
 $Setup = Join-Path $InstallerDir "ScreeniSetup-$Version.exe"
 if (-not (Test-Path $Setup)) {
     throw "Installer output not found: $Setup"
+}
+
+$installerSize = (Get-Item $Setup).Length
+$maxInstallerSize = 20MB
+Write-Host ("Installer size: {0:n1} MB" -f ($installerSize / 1MB))
+if ($installerSize -gt $maxInstallerSize) {
+    throw "Installer exceeds the 20 MB limit: $([math]::Round($installerSize / 1MB, 1)) MB"
 }
 
 Write-Timing "total build" $total

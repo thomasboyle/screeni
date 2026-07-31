@@ -13,6 +13,8 @@
     <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
     <WindowsAppSdkBootstrapInitialize>true</WindowsAppSdkBootstrapInitialize>
     <WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
     <EnableCoreMrtTooling>false</EnableCoreMrtTooling>
     <AppxPackage>false</AppxPackage>
     <GenerateAppxPackageOnBuild>false</GenerateAppxPackageOnBuild>
