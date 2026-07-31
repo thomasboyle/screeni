@@ -90,8 +90,8 @@
                                         Spacing="7"
                                         Margin="0,10,0,0">
                                 <SymbolIcon Symbol="Calendar"
-                                            Width="16"
-                                            Height="16"
+                                            FontSize="16"
+                                            VerticalAlignment="Center"
                                             Foreground="{StaticResource InkMutedBrush}" />
                                 <TextBlock Text="Today"
                                            Style="{StaticResource MutedTextStyle}"
@@ -109,8 +109,8 @@
                                 Background="{StaticResource AccentFillBrush}">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <SymbolIcon Symbol="Home"
-                                            Width="20"
-                                            Height="20"
+                                            FontSize="20"
+                                            VerticalAlignment="Center"
                                             Foreground="{StaticResource InkBrush}" />
                                 <TextBlock Text="Overview"
                                            Style="{StaticResource BodyTextStyle}"
@@ -121,8 +121,8 @@
                                 Style="{StaticResource NavButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <SymbolIcon Symbol="FourBars"
-                                            Width="20"
-                                            Height="20"
+                                            FontSize="20"
+                                            VerticalAlignment="Center"
                                             Foreground="{StaticResource InkMutedBrush}" />
                                 <TextBlock Text="Insights"
                                            Style="{StaticResource BodyTextStyle}"
@@ -133,8 +133,8 @@
                                 Style="{StaticResource NavButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <SymbolIcon Symbol="ViewAll"
-                                            Width="20"
-                                            Height="20"
+                                            FontSize="20"
+                                            VerticalAlignment="Center"
                                             Foreground="{StaticResource InkMutedBrush}" />
                                 <TextBlock Text="Apps"
                                            Style="{StaticResource BodyTextStyle}"
@@ -146,8 +146,8 @@
                                 Click="SettingsNavButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <SymbolIcon Symbol="Setting"
-                                            Width="20"
-                                            Height="20"
+                                            FontSize="20"
+                                            VerticalAlignment="Center"
                                             Foreground="{StaticResource InkMutedBrush}" />
                                 <TextBlock Text="Settings"
                                            Style="{StaticResource BodyTextStyle}"
@@ -202,15 +202,15 @@
                                     Style="{StaticResource PixelButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <SymbolIcon Symbol="Calendar"
-                                                Width="16"
-                                                Height="16"
+                                                FontSize="16"
+                                                VerticalAlignment="Center"
                                                 Foreground="{StaticResource InkMutedBrush}" />
                                     <TextBlock Text="Today"
                                                Style="{StaticResource BodyTextStyle}"
                                                VerticalAlignment="Center" />
                                     <FontIcon Glyph="&#xE70D;"
-                                              Width="12"
-                                              Height="12"
+                                              FontSize="12"
+                                              VerticalAlignment="Center"
                                               Foreground="{StaticResource InkMutedBrush}"
                                               Margin="7,0,0,0" />
                                 </StackPanel>
@@ -220,16 +220,16 @@
                                         Height="34"
                                         Style="{StaticResource PixelButtonStyle}">
                                     <FontIcon Glyph="&#xE76B;"
-                                              Width="14"
-                                              Height="14"
+                                              FontSize="14"
+                                              VerticalAlignment="Center"
                                               Foreground="{StaticResource InkBrush}" />
                                 </Button>
                                 <Button Width="38"
                                         Height="34"
                                         Style="{StaticResource PixelButtonStyle}">
                                     <FontIcon Glyph="&#xE76C;"
-                                              Width="14"
-                                              Height="14"
+                                              FontSize="14"
+                                              VerticalAlignment="Center"
                                               Foreground="{StaticResource InkBrush}" />
                                 </Button>
                             </StackPanel>
@@ -442,8 +442,7 @@
 
                                                 <FontIcon Grid.Column="4"
                                                           Glyph="&#xE76C;"
-                                                          Width="14"
-                                                          Height="14"
+                                                          FontSize="14"
                                                           Foreground="{StaticResource InkMutedBrush}"
                                                           HorizontalAlignment="Right"
                                                           VerticalAlignment="Center" />
