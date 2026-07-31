@@ -8,6 +8,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 $CoreSrc = Join-Path $Root "src\Screeni.Core"
 $CoreBuild = Join-Path $Root "build\Screeni.Core"
 $AppProj = Join-Path $Root "src\Screeni.App\Screeni.App.csproj"
+$AppVersion = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
 $PublishDir = Join-Path $Root "artifacts\publish"
 $InstallerDir = Join-Path $Root "artifacts\installer"
 $Iss = Join-Path $Root "installer\Screeni.iss"
@@ -35,6 +36,7 @@ dotnet publish $AppProj `
     -r win-x64 `
     --self-contained true `
     -p:Platform=x64 `
+    -p:Version=$AppVersion `
     -p:PublishSingleFile=false `
     -p:PublishTrimmed=true `
     -p:TrimMode=partial `

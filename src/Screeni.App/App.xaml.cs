@@ -5,9 +5,19 @@ namespace Screeni;
 
 public partial class App : Application
 {
+    internal const string ShutdownRequestEventName = @"Local\Screeni.ShutdownRequest";
+    internal const string ShutdownCompleteEventName = @"Local\Screeni.ShutdownComplete";
+
     private Window? _window;
     private TrayIconService? _tray;
     private readonly UsageService _usage = new();
+    private readonly UpdateService _updates = new();
+    private EventWaitHandle? _shutdownRequestEvent;
+    private EventWaitHandle? _shutdownCompleteEvent;
+    private RegisteredWaitHandle? _shutdownWait;
+    private DispatcherTimer? _updateTimer;
+    private AvailableUpdate? _availableUpdate;
+    private int _updateInProgress;
     private bool _exitRequested;
 
     public UsageService Usage => _usage;
@@ -35,19 +45,26 @@ public partial class App : Application
         };
 
         InitializeComponent();
+        RegisterShutdownSignal();
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         _usage.Start();
 
-        _window = new MainWindow();
+        var mainWindow = new MainWindow();
+        _window = mainWindow;
         _window.Closed += OnWindowClosed;
+        mainWindow.UpdateRequested += OnUpdateRequested;
         _window.Activate();
 
         _tray = new TrayIconService("Screeni");
         _tray.ShowRequested += ShowMainWindow;
         _tray.ExitRequested += OnTrayExitRequested;
+        _ = CheckForUpdatesAsync();
+        _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromHours(6) };
+        _updateTimer.Tick += (_, _) => _ = CheckForUpdatesAsync();
+        _updateTimer.Start();
     }
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
@@ -88,6 +105,110 @@ public partial class App : Application
         ExitApp();
     }
 
+    private void RegisterShutdownSignal()
+    {
+        try
+        {
+            _shutdownRequestEvent = new EventWaitHandle(
+                false,
+                EventResetMode.ManualReset,
+                ShutdownRequestEventName);
+            _shutdownCompleteEvent = new EventWaitHandle(
+                false,
+                EventResetMode.ManualReset,
+                ShutdownCompleteEventName);
+            _shutdownWait = ThreadPool.RegisterWaitForSingleObject(
+                _shutdownRequestEvent,
+                OnShutdownRequested,
+                null,
+                Timeout.Infinite,
+                true);
+        }
+        catch
+        {
+            _shutdownWait?.Unregister(null);
+            _shutdownWait = null;
+            _shutdownRequestEvent?.Dispose();
+            _shutdownRequestEvent = null;
+            _shutdownCompleteEvent?.Dispose();
+            _shutdownCompleteEvent = null;
+        }
+    }
+
+    private void OnShutdownRequested(object? state, bool timedOut)
+    {
+        if (!timedOut)
+        {
+            _window?.DispatcherQueue.TryEnqueue(ExitApp);
+        }
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var update = await _updates.CheckAsync();
+            if (!_exitRequested &&
+                update is not null &&
+                (_availableUpdate is null || update.Version > _availableUpdate.Version))
+            {
+                _availableUpdate = update;
+                if (_window is MainWindow main)
+                {
+                    main.ShowUpdateNotification(update.VersionText);
+                }
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private async void OnUpdateRequested()
+    {
+        if (Interlocked.Exchange(ref _updateInProgress, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var update = _availableUpdate;
+            if (update is null)
+            {
+                return;
+            }
+
+            if (_window is MainWindow main)
+            {
+                main.ShowUpdateStatus("Downloading update...");
+            }
+
+            var installerPath = await _updates.DownloadInstallerAsync(update);
+            if (_exitRequested)
+            {
+                return;
+            }
+
+            UpdateService.StartInstaller(installerPath);
+            ExitApp();
+        }
+        catch
+        {
+            if (_window is MainWindow main)
+            {
+                main.ShowUpdateError();
+            }
+        }
+        finally
+        {
+            if (!_exitRequested)
+            {
+                Interlocked.Exchange(ref _updateInProgress, 0);
+            }
+        }
+    }
+
     public void ExitApp()
     {
         if (_exitRequested)
@@ -102,9 +223,11 @@ public partial class App : Application
             main.ViewModel.DisposeTimer();
         }
 
+        _updateTimer?.Stop();
         _tray?.Dispose();
         _tray = null;
         _usage.Stop();
+        _shutdownCompleteEvent?.Set();
         _window?.Close();
         Exit();
     }

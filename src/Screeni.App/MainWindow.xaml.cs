@@ -9,6 +9,7 @@ namespace Screeni;
 public sealed partial class MainWindow : Window
 {
     public DashboardViewModel ViewModel { get; }
+    public event Action? UpdateRequested;
 
     public MainWindow()
     {
@@ -51,6 +52,30 @@ public sealed partial class MainWindow : Window
 
     public void RefreshDashboard() => ViewModel.Refresh();
 
+    public void ShowUpdateNotification(string version)
+    {
+        UpdateVersionText.Text = $"Screeni {version} is ready";
+        UpdateMessageText.Text = "Click to download and install";
+        UpdateBubble.IsEnabled = true;
+        UpdateBubble.Visibility = Visibility.Visible;
+    }
+
+    public void ShowUpdateStatus(string message)
+    {
+        UpdateVersionText.Text = "Updating Screeni...";
+        UpdateMessageText.Text = message;
+        UpdateBubble.IsEnabled = false;
+        UpdateBubble.Visibility = Visibility.Visible;
+    }
+
+    public void ShowUpdateError()
+    {
+        UpdateVersionText.Text = "Update failed";
+        UpdateMessageText.Text = "Try again later";
+        UpdateBubble.IsEnabled = true;
+        UpdateBubble.Visibility = Visibility.Visible;
+    }
+
     private void DayButton_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.SelectDayCommand.Execute(null);
@@ -90,4 +115,6 @@ public sealed partial class MainWindow : Window
     }
 
     private void ClearData_Click(object sender, RoutedEventArgs e) => ViewModel.ClearDataCommand.Execute(null);
+
+    private void UpdateBubble_Click(object sender, RoutedEventArgs e) => UpdateRequested?.Invoke();
 }

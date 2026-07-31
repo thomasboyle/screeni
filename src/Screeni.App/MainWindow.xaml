@@ -241,6 +241,32 @@
                 </Grid>
             </Grid>
 
+            <Button x:Name="UpdateBubble"
+                    Grid.RowSpan="4"
+                    Width="330"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,26,20"
+                    Padding="16,14"
+                    Style="{StaticResource PixelButtonStyle}"
+                    HorizontalContentAlignment="Stretch"
+                    Click="UpdateBubble_Click"
+                    Visibility="Collapsed"
+                    Canvas.ZIndex="3">
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Update available"
+                               Style="{StaticResource SectionTitleTextStyle}"
+                               FontSize="19" />
+                    <TextBlock x:Name="UpdateVersionText"
+                               Style="{StaticResource MutedTextStyle}"
+                               FontSize="16" />
+                    <TextBlock x:Name="UpdateMessageText"
+                               Text="Click to download and install"
+                               Style="{StaticResource BodyTextStyle}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Button>
+
             <Grid x:Name="SettingsOverlay"
                   Visibility="Collapsed"
                   Background="#7A4A452F"
