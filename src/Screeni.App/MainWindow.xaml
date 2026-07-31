@@ -208,29 +208,29 @@
                                     <TextBlock Text="Today"
                                                Style="{StaticResource BodyTextStyle}"
                                                VerticalAlignment="Center" />
-                                    <SymbolIcon Symbol="ChevronDown"
-                                                Width="12"
-                                                Height="12"
-                                                Foreground="{StaticResource InkMutedBrush}"
-                                                Margin="7,0,0,0" />
+                                    <FontIcon Glyph="&#xE70D;"
+                                              Width="12"
+                                              Height="12"
+                                              Foreground="{StaticResource InkMutedBrush}"
+                                              Margin="7,0,0,0" />
                                 </StackPanel>
                             </Button>
                             <StackPanel Orientation="Horizontal" Spacing="0">
                                 <Button Width="38"
                                         Height="34"
                                         Style="{StaticResource PixelButtonStyle}">
-                                    <SymbolIcon Symbol="ChevronLeft"
-                                                Width="14"
-                                                Height="14"
-                                                Foreground="{StaticResource InkBrush}" />
+                                    <FontIcon Glyph="&#xE76B;"
+                                              Width="14"
+                                              Height="14"
+                                              Foreground="{StaticResource InkBrush}" />
                                 </Button>
                                 <Button Width="38"
                                         Height="34"
                                         Style="{StaticResource PixelButtonStyle}">
-                                    <SymbolIcon Symbol="ChevronRight"
-                                                Width="14"
-                                                Height="14"
-                                                Foreground="{StaticResource InkBrush}" />
+                                    <FontIcon Glyph="&#xE76C;"
+                                              Width="14"
+                                              Height="14"
+                                              Foreground="{StaticResource InkBrush}" />
                                 </Button>
                             </StackPanel>
                         </StackPanel>
@@ -440,13 +440,13 @@
                                                            TextAlignment="Right"
                                                            VerticalAlignment="Center" />
 
-                                                <SymbolIcon Grid.Column="4"
-                                                            Symbol="ChevronRight"
-                                                            Width="14"
-                                                            Height="14"
-                                                            Foreground="{StaticResource InkMutedBrush}"
-                                                            HorizontalAlignment="Right"
-                                                            VerticalAlignment="Center" />
+                                                <FontIcon Grid.Column="4"
+                                                          Glyph="&#xE76C;"
+                                                          Width="14"
+                                                          Height="14"
+                                                          Foreground="{StaticResource InkMutedBrush}"
+                                                          HorizontalAlignment="Right"
+                                                          VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
