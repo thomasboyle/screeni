@@ -336,7 +336,6 @@ void Store::add_usage(int64_t app_id,
     const int64_t duration = end_ms - start_ms;
 
     sqlite3_reset(stmt_insert_session_);
-    sqlite3_clear_bindings(stmt_insert_session_);
     sqlite3_bind_int64(stmt_insert_session_, 1, app_id);
     sqlite3_bind_int64(stmt_insert_session_, 2, start_ms);
     sqlite3_bind_int64(stmt_insert_session_, 3, end_ms);
@@ -359,7 +358,6 @@ void Store::add_usage(int64_t app_id,
             std::chrono::duration_cast<std::chrono::milliseconds>(hour_end - cursor).count();
         if (slice > 0) {
             sqlite3_reset(stmt_upsert_daily_);
-            sqlite3_clear_bindings(stmt_upsert_daily_);
             sqlite3_bind_text(stmt_upsert_daily_, 1, day.c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_int64(stmt_upsert_daily_, 2, app_id);
             sqlite3_bind_int64(stmt_upsert_daily_, 3, slice);
@@ -367,7 +365,6 @@ void Store::add_usage(int64_t app_id,
             sqlite3_reset(stmt_upsert_daily_);
 
             sqlite3_reset(stmt_upsert_hourly_);
-            sqlite3_clear_bindings(stmt_upsert_hourly_);
             sqlite3_bind_text(stmt_upsert_hourly_, 1, day.c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_int(stmt_upsert_hourly_, 2, hour);
             sqlite3_bind_int64(stmt_upsert_hourly_, 3, app_id);

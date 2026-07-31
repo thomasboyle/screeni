@@ -32,10 +32,7 @@ public:
 private:
     struct FocusState {
         HWND hwnd = nullptr;
-        DWORD pid = 0;
         int64_t app_id = 0;
-        std::wstring exe_path;
-        std::wstring display_name;
         std::chrono::steady_clock::time_point segment_start{};
         std::chrono::system_clock::time_point segment_start_wall{};
         bool active = false;
@@ -63,7 +60,7 @@ private:
     std::atomic<bool> setup_ok_{false};
     std::atomic<int> idle_threshold_sec_{60};
     HANDLE ready_event_ = nullptr;
-    DWORD thread_id_ = 0;
+    std::atomic<DWORD> thread_id_{0};
     HWINEVENTHOOK hook_ = nullptr;
     HWND message_hwnd_ = nullptr;
 
@@ -72,7 +69,7 @@ private:
     bool idle_ = false;
     std::chrono::steady_clock::time_point last_flush_{};
 
-    static Tracker* instance_;
+    static std::atomic<Tracker*> instance_;
     static void CALLBACK win_event_proc(HWINEVENTHOOK hook,
                                         DWORD event,
                                         HWND hwnd,

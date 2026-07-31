@@ -10,7 +10,7 @@
 #include <filesystem>
 #include <vector>
 
-Tracker* Tracker::instance_ = nullptr;
+std::atomic<Tracker*> Tracker::instance_ = nullptr;
 
 namespace {
 
@@ -80,8 +80,9 @@ bool Tracker::start() {
     const DWORD wait = WaitForSingleObject(ready_event_, 15000);
     if (wait != WAIT_OBJECT_0 || !setup_ok_.load()) {
         stop_requested_ = true;
-        if (thread_id_ != 0) {
-            PostThreadMessageW(thread_id_, WM_QUIT, 0, 0);
+        const DWORD thread_id = thread_id_.load(std::memory_order_acquire);
+        if (thread_id != 0) {
+            PostThreadMessageW(thread_id, WM_QUIT, 0, 0);
         }
         if (thread_.joinable()) {
             thread_.join();
@@ -103,8 +104,9 @@ void Tracker::stop() {
     }
 
     stop_requested_ = true;
-    if (thread_id_ != 0) {
-        PostThreadMessageW(thread_id_, WM_QUIT, 0, 0);
+    const DWORD thread_id = thread_id_.load(std::memory_order_acquire);
+    if (thread_id != 0) {
+        PostThreadMessageW(thread_id, WM_QUIT, 0, 0);
     }
     if (thread_.joinable()) {
         thread_.join();
@@ -139,8 +141,9 @@ void Tracker::set_idle_threshold_sec(int seconds) {
 }
 
 bool Tracker::setup_message_loop() {
-    assert(instance_ == nullptr || instance_ == this);
-    instance_ = this;
+    assert(instance_.load(std::memory_order_acquire) == nullptr ||
+           instance_.load(std::memory_order_acquire) == this);
+    instance_.store(this, std::memory_order_release);
 
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);
@@ -200,13 +203,13 @@ void Tracker::teardown_message_loop() {
         DestroyWindow(message_hwnd_);
         message_hwnd_ = nullptr;
     }
-    instance_ = nullptr;
+    instance_.store(nullptr, std::memory_order_release);
 }
 
 void Tracker::thread_main() {
     // Publish thread id + create the message queue before any fallible setup so
     // start()/stop() can always PostThreadMessageW(WM_QUIT) without racing.
-    thread_id_ = GetCurrentThreadId();
+    thread_id_.store(GetCurrentThreadId(), std::memory_order_release);
     MSG peek{};
     PeekMessageW(&peek, nullptr, WM_USER, WM_USER, PM_NOREMOVE);
 
@@ -239,10 +242,11 @@ void CALLBACK Tracker::win_event_proc(HWINEVENTHOOK,
                                       LONG,
                                       DWORD,
                                       DWORD) {
-    if (!instance_ || event != EVENT_SYSTEM_FOREGROUND || id_object != OBJID_WINDOW) {
+    Tracker* const instance = instance_.load(std::memory_order_acquire);
+    if (!instance || event != EVENT_SYSTEM_FOREGROUND || id_object != OBJID_WINDOW) {
         return;
     }
-    instance_->on_foreground(hwnd);
+    instance->on_foreground(hwnd);
 }
 
 LRESULT CALLBACK Tracker::message_wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -347,10 +351,7 @@ void Tracker::begin_segment(HWND hwnd) {
     }
 
     current_.hwnd = hwnd;
-    current_.pid = pid;
     current_.app_id = app_id;
-    current_.exe_path = std::move(exe);
-    current_.display_name = std::move(name);
     current_.segment_start = std::chrono::steady_clock::now();
     current_.segment_start_wall = std::chrono::system_clock::now();
     current_.active = true;
