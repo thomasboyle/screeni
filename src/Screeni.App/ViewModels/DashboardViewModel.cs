@@ -1,7 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Screeni.Services;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
@@ -28,6 +27,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private double _idleThresholdSec = 60;
     private string _rangeLabel = "Today";
     private int _barCount = 24;
+    private List<AppUsageItem> _apps = [];
+    private List<ChartBar> _bars = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -74,8 +75,17 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         private set => SetField(ref _barCount, value);
     }
 
-    public ObservableCollection<AppUsageItem> Apps { get; } = new();
-    public ObservableCollection<ChartBar> Bars { get; } = new();
+    public List<AppUsageItem> Apps
+    {
+        get => _apps;
+        private set => SetField(ref _apps, value);
+    }
+
+    public List<ChartBar> Bars
+    {
+        get => _bars;
+        private set => SetField(ref _bars, value);
+    }
 
     public ICommand SelectDayCommand { get; }
     public ICommand SelectWeekCommand { get; }
@@ -139,26 +149,28 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
         var max = Math.Max(1, buckets.Max());
         var barWidth = SelectedRange == DashboardRange.Day ? DayBarWidth : WeekBarWidth;
-        Bars.Clear();
+        var bars = new List<ChartBar>(buckets.Length);
         for (var i = 0; i < buckets.Length; i++)
         {
             var share = buckets[i] / (double)max;
-            Bars.Add(new ChartBar(labels[i], Math.Max(3, share * ChartPlotHeight), barWidth, FormatDuration(buckets[i])));
+            bars.Add(new ChartBar(labels[i], Math.Max(3, share * ChartPlotHeight), barWidth, FormatDuration(buckets[i])));
         }
+        Bars = bars;
         BarCount = buckets.Length;
 
         var apps = _usage.QueryAppBreakdown(start, end);
         var total = apps.Sum(a => a.DurationMs);
-        Apps.Clear();
+        var appItems = new List<AppUsageItem>(apps.Count);
         foreach (var app in apps)
         {
-            Apps.Add(new AppUsageItem(
+            appItems.Add(new AppUsageItem(
                 app.DisplayName,
                 app.ExePath,
                 FormatDuration(app.DurationMs),
                 total <= 0 ? 0 : (double)app.DurationMs / total,
                 AppIconService.GetIcon(app.ExePath)));
         }
+        Apps = appItems;
     }
 
     public void DisposeTimer() => _timer.Stop();
