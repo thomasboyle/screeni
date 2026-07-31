@@ -2,6 +2,7 @@
 **/obj/
 **/build/
 **/artifacts/
+src/Screeni.App/Generated Files/
 **/installer/redist/
 **/.vs/
 *.user

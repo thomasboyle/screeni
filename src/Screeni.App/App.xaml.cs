@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml;
 using Screeni.Services;
 
@@ -7,6 +9,9 @@ public partial class App : Application
 {
     internal const string ShutdownRequestEventName = @"Local\Screeni.ShutdownRequest";
     internal const string ShutdownCompleteEventName = @"Local\Screeni.ShutdownComplete";
+    private const ulong TickCountMask = 0xFFFFFFFFUL;
+    private const ulong TickCountWrap = 0x100000000UL;
+    private const ulong WorkingSetTrimIdleMs = 2000;
 
     private Window? _window;
     private TrayIconService? _tray;
@@ -16,6 +21,7 @@ public partial class App : Application
     private EventWaitHandle? _shutdownCompleteEvent;
     private RegisteredWaitHandle? _shutdownWait;
     private DispatcherTimer? _updateTimer;
+    private DispatcherTimer? _memoryTrimTimer;
     private AvailableUpdate? _availableUpdate;
     private int _updateInProgress;
     private bool _exitRequested;
@@ -65,6 +71,17 @@ public partial class App : Application
         _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromHours(6) };
         _updateTimer.Tick += (_, _) => _ = CheckForUpdatesAsync();
         _updateTimer.Start();
+
+        TrimWorkingSet();
+        _memoryTrimTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _memoryTrimTimer.Tick += (_, _) =>
+        {
+            if (HasBeenInputIdle(WorkingSetTrimIdleMs))
+            {
+                TrimWorkingSet();
+            }
+        };
+        _memoryTrimTimer.Start();
     }
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
@@ -224,6 +241,7 @@ public partial class App : Application
         }
 
         _updateTimer?.Stop();
+        _memoryTrimTimer?.Stop();
         _tray?.Dispose();
         _tray = null;
         _usage.Stop();
@@ -231,4 +249,46 @@ public partial class App : Application
         _window?.Close();
         Exit();
     }
+
+    private static void TrimWorkingSet()
+    {
+        using var process = Process.GetCurrentProcess();
+        EmptyWorkingSet(process.Handle);
+    }
+
+    private static bool HasBeenInputIdle(ulong thresholdMs)
+    {
+        var info = new LastInputInfo { Size = (uint)Marshal.SizeOf<LastInputInfo>() };
+        if (!GetLastInputInfo(ref info))
+        {
+            return false;
+        }
+
+        var now = GetTickCount64();
+        var last = (now & ~TickCountMask) | info.Time;
+        if (last > now)
+        {
+            last -= TickCountWrap;
+        }
+
+        return now - last >= thresholdMs;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LastInputInfo
+    {
+        public uint Size;
+        public uint Time;
+    }
+
+    [DllImport("psapi.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EmptyWorkingSet(IntPtr hProcess);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetLastInputInfo(ref LastInputInfo plii);
+
+    [DllImport("kernel32.dll")]
+    private static extern ulong GetTickCount64();
 }

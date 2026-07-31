@@ -86,6 +86,7 @@ if (Test-Path (Join-Path $PublishCache "Screeni.App.exe")) {
         --self-contained true `
         -p:Platform=x64 `
         -p:Version=$Version `
+        -p:PublishAot=true `
         -p:PublishSingleFile=false `
         -p:PublishTrimmed=true `
         -p:TrimMode=partial `

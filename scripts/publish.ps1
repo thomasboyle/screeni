@@ -25,7 +25,7 @@ if (-not (Test-Path $CoreDll)) {
     throw "Screeni.Core.dll not found after build."
 }
 
-Write-Host "==> Publishing Screeni.App (trimmed self-contained .NET, framework WASDK)"
+Write-Host "==> Publishing Screeni.App (trimmed Native AOT, framework WASDK)"
 if (Test-Path $PublishDir) {
     Remove-Item $PublishDir -Recurse -Force
 }
@@ -37,6 +37,7 @@ dotnet publish $AppProj `
     --self-contained true `
     -p:Platform=x64 `
     -p:Version=$AppVersion `
+    -p:PublishAot=true `
     -p:PublishSingleFile=false `
     -p:PublishTrimmed=true `
     -p:TrimMode=partial `
