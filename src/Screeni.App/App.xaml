@@ -20,7 +20,7 @@
             <SolidColorBrush x:Key="FrameBrush" Color="#C4C9DA" />
             <SolidColorBrush x:Key="InkBrush" Color="#2F3547" />
             <SolidColorBrush x:Key="InkMutedBrush" Color="#7E869E" />
-            <SolidColorBrush x:Key="BorderSoftBrush" Color="rgba(255,255,255,0.7)" />
+            <SolidColorBrush x:Key="BorderSoftBrush" Color="#B3FFFFFF" />
             <SolidColorBrush x:Key="BorderStrongBrush" Color="#C4C9DA" />
             <SolidColorBrush x:Key="AccentBrush" Color="#E59B9B" />
             <SolidColorBrush x:Key="AccentDeepBrush" Color="#DE8686" />
@@ -29,7 +29,7 @@
             <SolidColorBrush x:Key="AccentFillHoverBrush" Color="#E08B8B" />
             <SolidColorBrush x:Key="AccentBorderBrush" Color="#DE8686" />
             <SolidColorBrush x:Key="DashBrush" Color="#A7AF85" />
-            <SolidColorBrush x:Key="DashSoftBrush" Color="rgba(0,0,0,0.06)" />
+            <SolidColorBrush x:Key="DashSoftBrush" Color="#0F000000" />
             <SolidColorBrush x:Key="PlantLightBrush" Color="#D4DFF5" />
             <SolidColorBrush x:Key="PlantMidBrush" Color="#E59B9B" />
             <SolidColorBrush x:Key="PlantDarkBrush" Color="#C9B8D9" />
@@ -273,9 +273,6 @@
                                         CornerRadius="{TemplateBinding CornerRadius}"
                                         HorizontalAlignment="Left"
                                         Width="{TemplateBinding Value}">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="4" ShadowDepth="0" Color="#E59B9B" Opacity="0.4"/>
-                                    </Border.Effect>
                                 </Border>
                             </Grid>
                         </ControlTemplate>

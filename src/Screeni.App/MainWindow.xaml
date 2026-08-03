@@ -7,17 +7,17 @@
 
     <Border Background="{StaticResource PageBackgroundBrush}">
         <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="272" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
             <!-- Title Bar Glow Line -->
             <Border Height="4"
                     VerticalAlignment="Top"
                     Background="{StaticResource TitleBarGlowBrush}"
                     Opacity="0.8"/>
             
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="272" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
             <Grid Grid.Column="0" Background="{StaticResource SidebarBackgroundBrush}">
                 <Canvas IsHitTestVisible="False"
                         Width="242"
@@ -168,7 +168,7 @@
                                 Style="{StaticResource NavButtonStyle}"
                                 Click="SettingsNavButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="16">
-                                <SymbolIcon Symbol="Settings"
+                                <SymbolIcon Symbol="Setting"
                                             Width="20"
                                             Height="20"
                                             Foreground="{StaticResource InkMutedBrush}" />
@@ -340,11 +340,9 @@
                                                                Height="{x:Bind BarHeight}"
                                                                RadiusX="4"
                                                                RadiusY="4"
-                                                               Fill="{StaticResource AccentBrush}">
-                                                        <Rectangle.Stroke>
-                                                            <SolidColorBrush Color="#DE8686" Thickness="1"/>
-                                                        </Rectangle.Stroke>
-                                                    </Rectangle>
+                                                               Fill="{StaticResource AccentBrush}"
+                                                               Stroke="#DE8686"
+                                                               StrokeThickness="1" />
                                                     
                                                     <!-- Baseline for zero-usage hours -->
                                                     <Rectangle Grid.Row="0"
