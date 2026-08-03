@@ -25,8 +25,6 @@ $CachedCoreDll = Join-Path $Root "artifacts\ci-cache\Screeni.Core.dll"
 
 "#define MyAppVersion `"$Version`"" | Set-Content (Join-Path $Root "installer\ci-version.iss") -Encoding utf8NoBOM
 
-# Inno Setup should be pre-installed on the runner (optimization #1)
-# Skip chocolatey installation entirely for faster builds
 $Iscc = @()
 $innoPaths = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
@@ -38,7 +36,6 @@ foreach ($path in $innoPaths) {
     if (Test-Path $path) { $Iscc += $path }
 }
 if (-not $Iscc) {
-    # Fallback: install Inno Setup (should rarely happen with pre-installed runners)
     Write-Host "==> Installing Inno Setup (not pre-installed)"
     & choco install innosetup -y --no-progress
     if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed: $LASTEXITCODE" }
@@ -47,7 +44,10 @@ if (-not $Iscc) {
     $Iscc = $Iscc | Select-Object -First 1
     Write-Host "==> Found Inno Setup at: $Iscc"
 }
+Write-Timing "inno discovery" $sw
 
+# Overlap Screeni.Core build with AOT publish when both miss cache.
+$buildProc = $null
 $CoreDll = $null
 if (Test-Path $CachedCoreDll) {
     Write-Host "==> Using cached Screeni.Core.dll"
@@ -58,61 +58,79 @@ if (Test-Path $CachedCoreDll) {
         throw "ninja not found on PATH (expected on windows-latest, as in Latenci CI)"
     }
 
-    Write-Host "==> Configure Screeni.Core (Ninja)"
-    cmake -S $CoreSrc -B $CoreBuild -G Ninja -DCMAKE_BUILD_TYPE=Release
-    if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
-    Write-Timing "cmake configure" $sw
-
-    $sw.Restart()
-    Write-Host "==> Build Screeni.Core"
-    cmake --build $CoreBuild --parallel
-    if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
-    Write-Timing "core build" $sw
-
-    $CoreDll = Join-Path $CoreBuild "bin\Screeni.Core.dll"
-    if (-not (Test-Path $CoreDll)) {
-        throw "Screeni.Core.dll not found after build."
-    }
-
-    New-Item -ItemType Directory -Force -Path (Split-Path $CachedCoreDll) | Out-Null
-    Copy-Item $CoreDll $CachedCoreDll -Force
+    Write-Host "==> Starting background Screeni.Core build"
+    $coreScript = @"
+`$ErrorActionPreference = 'Stop'
+cmake -S '$CoreSrc' -B '$CoreBuild' -G Ninja -DCMAKE_BUILD_TYPE=Release
+if (`$LASTEXITCODE -ne 0) { exit 1 }
+cmake --build '$CoreBuild' --parallel
+if (`$LASTEXITCODE -ne 0) { exit 2 }
+`$CoreDllFinal = Join-Path '$CoreBuild' 'bin\Screeni.Core.dll'
+if (-not (Test-Path `$CoreDllFinal)) { exit 3 }
+New-Item -ItemType Directory -Force -Path (Split-Path '$CachedCoreDll') | Out-Null
+Copy-Item `$CoreDllFinal '$CachedCoreDll' -Force
+exit 0
+"@
+    $tempScript = Join-Path $env:TEMP "screeni-build-core.ps1"
+    Set-Content -Path $tempScript -Value $coreScript -Encoding utf8
+    # Start-Process inherits MSVC env from ilammy/msvc-dev-cmd; Start-Job does not.
+    $buildProc = Start-Process pwsh -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $tempScript) -PassThru -NoNewWindow
 }
 
 $sw.Restart()
-if (Test-Path (Join-Path $PublishCache "Screeni.App.exe")) {
-    Write-Host "==> Using cached publish output"
-    if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path (Split-Path $PublishDir) | Out-Null
-    Copy-Item $PublishCache $PublishDir -Recurse -Force
-    Write-Timing "dotnet publish (cached)" $sw
-} else {
-    Write-Host "==> Publish Screeni.App"
-    if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path $PublishDir | Out-Null
+try {
+    if (Test-Path (Join-Path $PublishCache "Screeni.App.exe")) {
+        Write-Host "==> Using cached publish output"
+        if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path (Split-Path $PublishDir) | Out-Null
+        Copy-Item $PublishCache $PublishDir -Recurse -Force
+        Write-Timing "dotnet publish (cached)" $sw
+    } else {
+        Write-Host "==> Publish Screeni.App"
+        if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $PublishDir | Out-Null
 
-    # Optimization #2: AOT speed optimizations for faster CI builds
-    dotnet publish $AppProj `
-        -c Release `
-        -r win-x64 `
-        --self-contained true `
-        -p:Platform=x64 `
-        -p:Version=$Version `
-        -p:PublishAot=true `
-        -p:PublishSingleFile=false `
-        -p:PublishTrimmed=true `
-        -p:TrimMode=partial `
-        -p:WindowsAppSDKSelfContained=false `
-        -p:DebugType=None `
-        -p:DebugSymbols=false `
-        -p:IlcOptimizationPreference=Speed `
-        -p:IlcFoldMethodBodies=false `
-        -o $PublishDir
-    if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
-    Write-Timing "dotnet publish" $sw
+        # IlcOptimizationPreference=Size comes from the csproj (faster AOT compile than Speed).
+        dotnet publish $AppProj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:Platform=x64 `
+            -p:Version=$Version `
+            -p:PublishAot=true `
+            -p:PublishSingleFile=false `
+            -p:PublishTrimmed=true `
+            -p:TrimMode=partial `
+            -p:WindowsAppSDKSelfContained=false `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            -o $PublishDir
+        if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+        Write-Timing "dotnet publish" $sw
 
-    if (Test-Path $PublishCache) { Remove-Item $PublishCache -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path (Split-Path $PublishCache) | Out-Null
-    Copy-Item $PublishDir $PublishCache -Recurse -Force
+        if (Test-Path $PublishCache) { Remove-Item $PublishCache -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path (Split-Path $PublishCache) | Out-Null
+        Copy-Item $PublishDir $PublishCache -Recurse -Force
+    }
+} finally {
+    if ($buildProc -and -not $buildProc.HasExited) {
+        Write-Host "==> Waiting for Screeni.Core build to finish..."
+        $buildProc.WaitForExit()
+    }
+}
+
+if ($buildProc) {
+    if ($buildProc.ExitCode -ne 0) {
+        throw "Screeni.Core background build failed with exit code $($buildProc.ExitCode)"
+    }
+    Write-Timing "core build (overlapped)" $sw
+}
+
+if (-not $CoreDll) {
+    $CoreDll = $CachedCoreDll
+}
+if (-not (Test-Path $CoreDll)) {
+    throw "Screeni.Core.dll not found after build."
 }
 
 Copy-Item $CoreDll (Join-Path $PublishDir "Screeni.Core.dll") -Force
@@ -120,8 +138,6 @@ $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
 Copy-Item (Join-Path $Root "src\Screeni.App\Assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
 Get-ChildItem $PublishDir -Filter *.pdb -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
-
-# $chocoJob removed - Inno Setup is now pre-installed or installed synchronously at start
 
 New-Item -ItemType Directory -Force -Path $InstallerDir | Out-Null
 Get-ChildItem $InstallerDir -Filter "ScreeniSetup-*.exe" -ErrorAction SilentlyContinue | Remove-Item -Force
