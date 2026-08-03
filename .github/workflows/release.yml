@@ -41,23 +41,42 @@ jobs:
           "#define MyAppVersion `"$next`"" | Set-Content installer/ci-version.iss -Encoding utf8NoBOM
           Write-Host "Next version: $next"
 
+      # Optimization #4: Improved caching with separate NuGet cache and granular composite keys
+      - uses: actions/cache@v5
+        id: nuget-cache
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.nuget/global-packages
+          key: nuget-${{ hashFiles('**/*.csproj', '**/*.props') }}
+          restore-keys: |
+            nuget-${{ hashFiles('**/*.csproj', '**/*.props') }}
+            nuget-
+
       - uses: actions/cache@v5
         id: publish-cache
         with:
           path: artifacts/ci-cache/publish
-          key: publish-${{ hashFiles('src/Screeni.App/**') }}-${{ steps.version.outputs.version }}
+          key: publish-${{ runner.os }}-${{ hashFiles('src/Screeni.App/**', '!src/Screeni.App/bin/**', '!src/Screeni.App/obj/**') }}-${{ steps.version.outputs.version }}
+          restore-keys: |
+            publish-${{ runner.os }}-${{ hashFiles('src/Screeni.App/**', '!src/Screeni.App/bin/**', '!src/Screeni.App/obj/**') }}-
+            publish-${{ runner.os }}-
 
       - uses: actions/cache@v5
         id: core-dll
         with:
           path: artifacts/ci-cache/Screeni.Core.dll
-          key: core-dll-${{ hashFiles('src/Screeni.Core/**') }}
+          key: core-dll-${{ runner.os }}-${{ hashFiles('src/Screeni.Core/**', '!src/Screeni.Core/build/**') }}
+          restore-keys: |
+            core-dll-${{ runner.os }}-${{ hashFiles('src/Screeni.Core/**', '!src/Screeni.Core/build/**') }}
+            core-dll-${{ runner.os }}-
 
       - uses: TheMrMilchmann/setup-msvc-dev@v4
         if: steps.core-dll.outputs.cache-hit != 'true'
         with:
           arch: x64
 
+      # Optimization #3: Parallelize Inno Setup check with .NET publish by running script that handles both
       - name: Build release
         shell: pwsh
         run: ./scripts/ci-release.ps1 -Version '${{ steps.version.outputs.version }}'
