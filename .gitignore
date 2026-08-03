@@ -1,12 +1,29 @@
-**/bin/
-**/obj/
-**/build/
-**/artifacts/
-src/Screeni.App/Generated Files/
-**/installer/redist/
-**/.vs/
+```
+# Build artifacts
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+*.userprefs
+*.cache
+*.log
+
+# Dependencies
+packages/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Visual Studio files
+.vs/
 *.user
 *.suo
-*.pdb
-src/Screeni.Core/third_party/sqlite_tmp/
-*.zip
+*.userosscache
+*.sln.docstates
+
+# Temporary files
+*.tmp
+*.temp
+```
