@@ -154,7 +154,7 @@
                         <Button Height="45"
                                 Style="{StaticResource NavButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="16">
-                                <SymbolIcon Symbol="View"
+                                <SymbolIcon Symbol="AllApps"
                                             Width="20"
                                             Height="20"
                                             Foreground="{StaticResource InkMutedBrush}" />
