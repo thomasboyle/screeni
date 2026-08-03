@@ -141,7 +141,7 @@
                         <Button Height="45"
                                 Style="{StaticResource NavButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="16">
-                                <SymbolIcon Symbol="FourBars"
+                                <SymbolIcon Symbol="List"
                                             Width="20"
                                             Height="20"
                                             Foreground="{StaticResource InkMutedBrush}" />
@@ -154,7 +154,7 @@
                         <Button Height="45"
                                 Style="{StaticResource NavButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="16">
-                                <SymbolIcon Symbol="ViewAll"
+                                <SymbolIcon Symbol="View"
                                             Width="20"
                                             Height="20"
                                             Foreground="{StaticResource InkMutedBrush}" />
@@ -168,7 +168,7 @@
                                 Style="{StaticResource NavButtonStyle}"
                                 Click="SettingsNavButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="16">
-                                <SymbolIcon Symbol="Setting"
+                                <SymbolIcon Symbol="Settings"
                                             Width="20"
                                             Height="20"
                                             Foreground="{StaticResource InkMutedBrush}" />
