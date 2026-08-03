@@ -25,17 +25,27 @@ $CachedCoreDll = Join-Path $Root "artifacts\ci-cache\Screeni.Core.dll"
 
 "#define MyAppVersion `"$Version`"" | Set-Content (Join-Path $Root "installer\ci-version.iss") -Encoding utf8NoBOM
 
-$needInno = -not (
-    (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") -or
-    (Test-Path "${env:ProgramFiles}\Inno Setup 6\ISCC.exe")
+# Inno Setup should be pre-installed on the runner (optimization #1)
+# Skip chocolatey installation entirely for faster builds
+$Iscc = @()
+$innoPaths = @(
+    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+    "${env:ProgramFiles}\Inno Setup 6\ISCC.exe",
+    "${env:ProgramFiles(x86)}\Inno Setup\ISCC.exe",
+    "${env:ProgramFiles}\Inno Setup\ISCC.exe"
 )
-$chocoJob = $null
-if ($needInno) {
-    Write-Host "==> Installing Inno Setup in background"
-    $chocoJob = Start-Job -ScriptBlock {
-        & choco install innosetup -y --no-progress
-        if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed: $LASTEXITCODE" }
-    }
+foreach ($path in $innoPaths) {
+    if (Test-Path $path) { $Iscc += $path }
+}
+if (-not $Iscc) {
+    # Fallback: install Inno Setup (should rarely happen with pre-installed runners)
+    Write-Host "==> Installing Inno Setup (not pre-installed)"
+    & choco install innosetup -y --no-progress
+    if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed: $LASTEXITCODE" }
+    $Iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "${env:ProgramFiles}\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+} else {
+    $Iscc = $Iscc | Select-Object -First 1
+    Write-Host "==> Found Inno Setup at: $Iscc"
 }
 
 $CoreDll = $null
@@ -80,6 +90,7 @@ if (Test-Path (Join-Path $PublishCache "Screeni.App.exe")) {
     if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $PublishDir | Out-Null
 
+    # Optimization #2: AOT speed optimizations for faster CI builds
     dotnet publish $AppProj `
         -c Release `
         -r win-x64 `
@@ -93,6 +104,8 @@ if (Test-Path (Join-Path $PublishCache "Screeni.App.exe")) {
         -p:WindowsAppSDKSelfContained=false `
         -p:DebugType=None `
         -p:DebugSymbols=false `
+        -p:IlcOptimizationPreference=Speed `
+        -p:IlcFoldMethodBodies=false `
         -o $PublishDir
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
     Write-Timing "dotnet publish" $sw
@@ -108,18 +121,7 @@ New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
 Copy-Item (Join-Path $Root "src\Screeni.App\Assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
 Get-ChildItem $PublishDir -Filter *.pdb -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
 
-if ($chocoJob) {
-    Write-Host "==> Waiting for Inno Setup install"
-    Receive-Job $chocoJob -Wait -AutoRemoveJob
-}
-
-$Iscc = @(
-    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-    "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
-) | Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $Iscc) {
-    throw "Inno Setup 6 (ISCC.exe) not found."
-}
+# $chocoJob removed - Inno Setup is now pre-installed or installed synchronously at start
 
 New-Item -ItemType Directory -Force -Path $InstallerDir | Out-Null
 Get-ChildItem $InstallerDir -Filter "ScreeniSetup-*.exe" -ErrorAction SilentlyContinue | Remove-Item -Force
