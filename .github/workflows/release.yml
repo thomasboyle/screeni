@@ -41,7 +41,6 @@ jobs:
           "#define MyAppVersion `"$next`"" | Set-Content installer/ci-version.iss -Encoding utf8NoBOM
           Write-Host "Next version: $next"
 
-      # Optimization #4: Improved caching with separate NuGet cache and granular composite keys
       - uses: actions/cache@v5
         id: nuget-cache
         with:
@@ -71,12 +70,12 @@ jobs:
             core-dll-${{ runner.os }}-${{ hashFiles('src/Screeni.Core/**', '!src/Screeni.Core/build/**') }}
             core-dll-${{ runner.os }}-
 
-      - uses: TheMrMilchmann/setup-msvc-dev@v4
+      # Expose pre-installed MSVC (~2s) instead of downloading Build Tools (~70s).
+      - uses: ilammy/msvc-dev-cmd@v1
         if: steps.core-dll.outputs.cache-hit != 'true'
         with:
           arch: x64
 
-      # Optimization #3: Parallelize Inno Setup check with .NET publish by running script that handles both
       - name: Build release
         shell: pwsh
         run: ./scripts/ci-release.ps1 -Version '${{ steps.version.outputs.version }}'
