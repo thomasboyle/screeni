@@ -11,25 +11,29 @@
             <FontFamily x:Key="AppFont">Segoe UI Variable Text</FontFamily>
             <FontFamily x:Key="PixelFont">Segoe UI Variable Text</FontFamily>
 
-            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#FCFBF6" />
-            <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F8F8F0" />
-            <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFDF9" />
-            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F3F4E9" />
-            <SolidColorBrush x:Key="SurfacePressedBrush" Color="#E9EBD8" />
-            <SolidColorBrush x:Key="FrameBrush" Color="#DEDCCF" />
-            <SolidColorBrush x:Key="InkBrush" Color="#34412D" />
-            <SolidColorBrush x:Key="InkMutedBrush" Color="#7B806F" />
-            <SolidColorBrush x:Key="BorderSoftBrush" Color="#E4E2D7" />
-            <SolidColorBrush x:Key="BorderStrongBrush" Color="#C9CBB8" />
-            <SolidColorBrush x:Key="AccentBrush" Color="#9AA574" />
-            <SolidColorBrush x:Key="AccentFillBrush" Color="#E8E9D6" />
-            <SolidColorBrush x:Key="AccentFillHoverBrush" Color="#DDE1C6" />
-            <SolidColorBrush x:Key="AccentBorderBrush" Color="#899563" />
+            <!-- Color Palette: Soft pastel periwinkle/salmon clay-glassmorphism -->
+            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#E4E8F3" />
+            <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#C7CCDE" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#E9ECF6" />
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F0F2FA" />
+            <SolidColorBrush x:Key="SurfacePressedBrush" Color="#E0E4F0" />
+            <SolidColorBrush x:Key="FrameBrush" Color="#C4C9DA" />
+            <SolidColorBrush x:Key="InkBrush" Color="#2F3547" />
+            <SolidColorBrush x:Key="InkMutedBrush" Color="#7E869E" />
+            <SolidColorBrush x:Key="BorderSoftBrush" Color="rgba(255,255,255,0.7)" />
+            <SolidColorBrush x:Key="BorderStrongBrush" Color="#C4C9DA" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#E59B9B" />
+            <SolidColorBrush x:Key="AccentDeepBrush" Color="#DE8686" />
+            <SolidColorBrush x:Key="AccentTintBrush" Color="#F6DEDC" />
+            <SolidColorBrush x:Key="AccentFillBrush" Color="#E79F98" />
+            <SolidColorBrush x:Key="AccentFillHoverBrush" Color="#E08B8B" />
+            <SolidColorBrush x:Key="AccentBorderBrush" Color="#DE8686" />
             <SolidColorBrush x:Key="DashBrush" Color="#A7AF85" />
-            <SolidColorBrush x:Key="DashSoftBrush" Color="#E2E2D6" />
-            <SolidColorBrush x:Key="PlantLightBrush" Color="#D7DEC0" />
-            <SolidColorBrush x:Key="PlantMidBrush" Color="#B9C695" />
-            <SolidColorBrush x:Key="PlantDarkBrush" Color="#9DAC75" />
+            <SolidColorBrush x:Key="DashSoftBrush" Color="rgba(0,0,0,0.06)" />
+            <SolidColorBrush x:Key="PlantLightBrush" Color="#D4DFF5" />
+            <SolidColorBrush x:Key="PlantMidBrush" Color="#E59B9B" />
+            <SolidColorBrush x:Key="PlantDarkBrush" Color="#C9B8D9" />
+            <SolidColorBrush x:Key="TitleBarGlowBrush" Color="#F07070" />
 
             <Style x:Key="BodyTextStyle" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
@@ -248,15 +252,35 @@
             </Style>
 
             <Style x:Key="PixelBarStyle" TargetType="ProgressBar">
-                <Setter Property="Height" Value="4" />
+                <Setter Property="Height" Value="8" />
                 <Setter Property="Minimum" Value="0" />
                 <Setter Property="Maximum" Value="1" />
                 <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="CornerRadius" Value="0" />
+                <Setter Property="CornerRadius" Value="4" />
                 <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Grid>
+                                <Border x:Name="Track"
+                                        Background="{TemplateBinding Background}"
+                                        CornerRadius="{TemplateBinding CornerRadius}" />
+                                <Border x:Name="Indicator"
+                                        Background="{TemplateBinding Foreground}"
+                                        CornerRadius="{TemplateBinding CornerRadius}"
+                                        HorizontalAlignment="Left"
+                                        Width="{TemplateBinding Value}">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="4" ShadowDepth="0" Color="#E59B9B" Opacity="0.4"/>
+                                    </Border.Effect>
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style x:Key="PixelCheckBoxStyle" TargetType="CheckBox">
