@@ -56,7 +56,6 @@
                                 Margin="29,31,0,0"
                                 Height="39"
                                 Spacing="10">
-                        <!-- Brand chip with sprout logo -->
                         <Border Background="{StaticResource SurfaceBrush}"
                                 BorderBrush="{StaticResource BorderSoftBrush}"
                                 BorderThickness="1"
@@ -117,7 +116,6 @@
                     <StackPanel Grid.Row="2"
                                 Margin="19,20,19,0"
                                 Spacing="4">
-                        <!-- Overview — selected matcha stipple -->
                         <Button x:Name="OverviewNav"
                                 Height="44"
                                 Style="{StaticResource NavButtonStyle}"
@@ -251,7 +249,6 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Screen Time Chart Card -->
                     <Border Grid.Row="2"
                             Margin="0,15,0,0"
                             Padding="28"
@@ -290,7 +287,8 @@
                                             VerticalAlignment="Top"
                                             Margin="0,90,0,0"
                                             Background="{StaticResource DashSoftBrush}" />
-                                    <Border Height="1"égime="Top"
+                                    <Border Height="1"
+                                            VerticalAlignment="Top"
                                             Margin="0,150,0,0"
                                             Background="{StaticResource BorderSoftBrush}" />
 
@@ -368,7 +366,6 @@
                         </Grid>
                     </Border>
 
-                    <!-- Top Apps Card -->
                     <Border Grid.Row="3"
                             Margin="0,20,0,0"
                             Background="{StaticResource SurfaceBrush}"
