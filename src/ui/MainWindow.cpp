@@ -327,9 +327,11 @@ void MainWindow::applyUpdateBubbleTheme()
                                     .arg(P.surface.name(), P.borderStrong.name()));
     if (updateBubbleDismiss_) {
         updateBubbleDismiss_->setStyleSheet(QStringLiteral(
-            "QPushButton#bubbleClose { background: transparent; border: none; color:%1;"
-            " font-size: 14px; font-weight: bold; padding: 0; margin: 0; text-align: center; }"
-            "QPushButton#bubbleClose:hover { color:%2; }")
+            "QPushButton#bubbleClose { background: transparent; border: none; outline: none; color:%1;"
+            " font-size: 13px; font-weight: bold; padding: 0; margin: 0; min-width: 0; min-height: 0;"
+            " text-align: center; }"
+            "QPushButton#bubbleClose:hover { color:%2; background: transparent; border: none; }"
+            "QPushButton#bubbleClose:pressed { color:%2; background: transparent; border: none; }")
                                                .arg(P.inkMuted.name(), P.ink.name()));
     }
 }
