@@ -7,8 +7,6 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-option(SCREENI_STATIC_QT "Link Qt statically" OFF)
-
 find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Network)
 
 find_package(SQLite3 QUIET)
@@ -17,18 +15,28 @@ set(SCREENI_SQLITE_LIBS "")
 if(SQLite3_FOUND)
   set(SCREENI_SQLITE_LIBS SQLite::SQLite3)
 else()
-  if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/sqlite/sqlite3.c")
+  if(EXISTS "${CMAKE_SOURCE_DIR}/src/Screeni.Core/third_party/sqlite/sqlite3.c")
+    list(APPEND SCREENI_SQLITE_SOURCES src/Screeni.Core/third_party/sqlite/sqlite3.c)
+    include_directories(src/Screeni.Core/third_party/sqlite)
+  elseif(EXISTS "${CMAKE_SOURCE_DIR}/third_party/sqlite/sqlite3.c")
     list(APPEND SCREENI_SQLITE_SOURCES third_party/sqlite/sqlite3.c)
     include_directories(third_party/sqlite)
   else()
-    message(FATAL_ERROR "SQLite3 not found. Install libsqlite3-dev or place amalgamation in third_party/sqlite/")
+    message(FATAL_ERROR "SQLite3 not found")
   endif()
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/store.cpp")
+  set(SCREENI_CORE_SOURCES src/core/store.cpp src/core/tracker.cpp)
+  set(SCREENI_CORE_INCLUDE src/core)
+else()
+  set(SCREENI_CORE_SOURCES src/Screeni.Core/src/store.cpp src/Screeni.Core/src/tracker.cpp)
+  set(SCREENI_CORE_INCLUDE src/Screeni.Core/src)
 endif()
 
 add_executable(Screeni WIN32
   src/main.cpp
-  src/core/store.cpp
-  src/core/tracker.cpp
+  ${SCREENI_CORE_SOURCES}
   src/ui/MainWindow.cpp
   src/ui/OverviewPage.cpp
   src/ui/InsightsPage.cpp
@@ -40,8 +48,7 @@ add_executable(Screeni WIN32
   ${SCREENI_SQLITE_SOURCES}
 )
 
-target_include_directories(Screeni PRIVATE src src/core src/ui src/services)
-
+target_include_directories(Screeni PRIVATE src ${SCREENI_CORE_INCLUDE} src/ui src/services)
 target_link_libraries(Screeni PRIVATE Qt6::Widgets Qt6::Network ${SCREENI_SQLITE_LIBS})
 
 if(WIN32)
@@ -60,6 +67,4 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"
 endif()
 
 install(TARGETS Screeni RUNTIME DESTINATION bin)
-install(DIRECTORY assets/ DESTINATION share/screeni/assets OPTIONAL)
-
 message(STATUS "Screeni ${PROJECT_VERSION} — Qt ${Qt6_VERSION}")
