@@ -125,7 +125,7 @@ inline QString globalStyleSheet()
         "QPushButton:pressed { background-color: %12; border: 2px solid %13; }"
         "QFrame#sidebar QPushButton#nav { color: %36; background: transparent; border: none; border-radius: 4px; text-align: center; padding: 0 14px; min-height: 44px; }"
         "QFrame#sidebar QPushButton#nav:hover { background-color: %38; color: %40; }"
-        "QFrame#sidebar QPushButton#nav[navSelected=\"true\"] { background-color: %39; color: %40; border: none; border-left: 4px solid %41; border-right: 4px solid %41; border-radius: 4px; text-align: center; padding: 0 10px; min-height: 44px; }"
+        "QFrame#sidebar QPushButton#nav[navSelected=\"true\"] { background-color: %39; color: %42; border: none; border-left: 4px solid %41; border-right: 4px solid %41; border-radius: 4px; text-align: center; padding: 0 10px; min-height: 44px; }"
         "QPushButton#toggle { min-width: 72px; min-height: 40px; }"
         "QPushButton#toggleChecked { background-color: %17; border: 1px solid %18; min-width: 72px; min-height: 40px; }"
         "QFrame#card { background-color: %19; border: 1px solid %20; border-radius: 10px; }"
@@ -188,8 +188,9 @@ inline QString globalStyleSheet()
         .arg(P.sidebarInk.name())                 // %36
         .arg(P.sidebarInkMuted.name())            // %37
         .arg(P.plantLight.name())                 // %38
-        .arg(P.accentFill.name())                 // %39
+        .arg(P.accent.name())                     // %39  (selected nav bg)
         .arg(P.ink.name())                        // %40
-        .arg(P.plantDark.name());                 // %41
+        .arg(P.plantLight.name())                 // %41
+        .arg(P.sidebarInk.name());                // %42
 }
 }  // namespace Theme

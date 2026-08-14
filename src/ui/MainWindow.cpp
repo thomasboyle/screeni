@@ -58,7 +58,6 @@ MainWindow::MainWindow(Tracker& tracker, QWidget* parent)
     });
 
     auto* central = new QWidget(this);
-    central->setStyleSheet(QStringLiteral("background: transparent;"));
     setCentralWidget(central);
 
     auto* root = new QHBoxLayout(central);
