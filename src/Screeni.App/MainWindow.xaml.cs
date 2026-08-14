@@ -51,6 +51,8 @@ public sealed partial class MainWindow : Window
 
         ChartLayout.MaximumRowsOrColumns = ViewModel.BarCount;
         SyncRangeToggles();
+
+        // Apply initial page state after the tree is built so both panels get a full measure.
         ShowPage("overview");
 
         Activated += MainWindow_Activated;
@@ -136,22 +138,55 @@ public sealed partial class MainWindow : Window
 
     private void InsightsNav_Click(object sender, RoutedEventArgs e) => ShowPage("insights");
 
+    /// <summary>
+    /// Swap main pages. Both panels stay Visibility=Visible so WinUI keeps a full layout pass;
+    /// we toggle Opacity / IsHitTestVisible / ZIndex instead of Collapsed (which can leave the
+    /// newly shown sibling with zero arranged size when sharing a single Grid cell).
+    /// </summary>
     private void ShowPage(string page)
     {
-        _activePage = page;
-
-        OverviewPanel.Visibility = page == "overview" ? Visibility.Visible : Visibility.Collapsed;
-        InsightsPanel.Visibility = page == "insights" ? Visibility.Visible : Visibility.Collapsed;
-
-        OverviewNav.Background = page == "overview" ? SelectedNavBrush : TransparentBrush;
-        InsightsNav.Background = page == "insights" ? SelectedNavBrush : TransparentBrush;
-
-        SetNavForeground(OverviewNav, page == "overview");
-        SetNavForeground(InsightsNav, page == "insights");
-
-        if (page == "insights")
+        try
         {
-            Insights.Refresh();
+            _activePage = page;
+            var showInsights = string.Equals(page, "insights", StringComparison.Ordinal);
+
+            OverviewPanel.Visibility = Visibility.Visible;
+            InsightsPanel.Visibility = Visibility.Visible;
+
+            OverviewPanel.Opacity = showInsights ? 0 : 1;
+            OverviewPanel.IsHitTestVisible = !showInsights;
+
+            InsightsPanel.Opacity = showInsights ? 1 : 0;
+            InsightsPanel.IsHitTestVisible = showInsights;
+
+            Canvas.SetZIndex(OverviewPanel, showInsights ? 0 : 1);
+            Canvas.SetZIndex(InsightsPanel, showInsights ? 1 : 0);
+
+            OverviewNav.Background = showInsights ? TransparentBrush : SelectedNavBrush;
+            InsightsNav.Background = showInsights ? SelectedNavBrush : TransparentBrush;
+            SetNavForeground(OverviewNav, !showInsights);
+            SetNavForeground(InsightsNav, showInsights);
+
+            if (showInsights)
+            {
+                Insights.Refresh();
+            }
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                var path = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Screeni",
+                    "nav.log");
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.AppendAllText(path, $"{DateTime.Now:o} ShowPage({page}): {ex}\n");
+            }
+            catch
+            {
+                // ignore logging failures
+            }
         }
     }
 
@@ -161,10 +196,6 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
-
-        var brush = selected
-            ? (Brush)Application.Current.Resources["NavSelectedForegroundBrush"]
-            : (Brush)Application.Current.Resources["InkMutedBrush"];
 
         foreach (var child in panel.Children)
         {
