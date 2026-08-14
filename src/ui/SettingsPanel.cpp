@@ -54,6 +54,7 @@ SettingsPanel::SettingsPanel(QWidget* parent) : QWidget(parent)
     themeBox_->addItem(QStringLiteral("Matcha"), static_cast<int>(Theme::Id::Matcha));
     themeBox_->addItem(QStringLiteral("Lilac"), static_cast<int>(Theme::Id::Lilac));
     themeBox_->setCurrentIndex(static_cast<int>(Theme::Id::Matcha));
+    applyThemeBoxStyle();
     lay->addWidget(themeBox_);
 
     auto* apply = new QPushButton(QStringLiteral("Apply"));
@@ -80,6 +81,21 @@ void SettingsPanel::retheme()
 {
     card_->setStyleSheet(QStringLiteral("QFrame#card { background:%1; border:1px solid %2; border-radius:10px; }")
                              .arg(Theme::palette().surface.name(), Theme::palette().borderStrong.name()));
+    applyThemeBoxStyle();
+}
+
+void SettingsPanel::applyThemeBoxStyle()
+{
+    if (!themeBox_)
+        return;
+    const auto& P = Theme::palette();
+    themeBox_->setStyleSheet(QStringLiteral(
+        "QComboBox { background:%1; color:%2; border:1px solid %3; border-radius:4px; padding:4px 8px; min-height:30px; }"
+        "QComboBox::drop-down { border:none; width:20px; }"
+        "QComboBox QAbstractItemView { background:%1; color:%2; border:1px solid %3; border-radius:4px; padding:4px; outline:none; selection-background-color:%5; selection-color:%2; }"
+        "QComboBox QAbstractItemView::item { min-height:30px; padding:6px 8px; background:%1; }"
+        "QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background:%5; }")
+                                .arg(P.surface.name(), P.ink.name(), P.borderSoft.name(), P.surface.name(), P.accentFill.name()));
 }
 
 void SettingsPanel::mousePressEvent(QMouseEvent* event)

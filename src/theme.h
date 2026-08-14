@@ -143,7 +143,7 @@ inline QString globalStyleSheet()
         "QComboBox { background: %32; color: %33; border: 1px solid %34; border-radius: 4px; padding: 4px 8px; min-height: 30px; }"
         "QComboBox::drop-down { border: none; width: 20px; }"
         "QComboBox QAbstractItemView { background: %32; color: %33; border: 1px solid %34; border-radius: 4px; padding: 4px; outline: none; selection-background-color: %35; selection-color: %33; }"
-        "QComboBox QAbstractItemView::item { min-height: 30px; padding: 6px 8px; background: transparent; }"
+        "QComboBox QAbstractItemView::item { min-height: 30px; padding: 6px 8px; background: %32; }"
         "QComboBox QAbstractItemView::item:hover { background: %35; }"
         "QScrollArea { border: none; background: transparent; }"
         "QScrollBar:vertical { background: transparent; width: 8px; }"
