@@ -52,6 +52,7 @@ public sealed partial class MainWindow : Window
         ChartLayout.MaximumRowsOrColumns = ViewModel.BarCount;
         SyncRangeToggles();
 
+        // Code-behind subscription: XAML Click can be dropped under Native AOT / XBF.
         OverviewNav.Click += OverviewNav_Click;
         InsightsNav.Click += InsightsNav_Click;
 
@@ -154,11 +155,39 @@ public sealed partial class MainWindow : Window
 
     private void ShowPage(string page)
     {
+        // Always log entry — proves Click reached the handler.
         try
         {
-            _activePage = page;
-            var showInsights = string.Equals(page, "insights", StringComparison.Ordinal);
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Screeni",
+                "nav.log");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.AppendAllText(path, $"{DateTime.Now:o} ShowPage enter: {page}\n");
+        }
+        catch
+        {
+        }
 
+        _activePage = page;
+        var showInsights = string.Equals(page, "insights", StringComparison.Ordinal);
+
+        // Nav chrome first — if this runs, Click worked even when content layout fails.
+        try
+        {
+            OverviewNav.Background = showInsights ? TransparentBrush : SelectedNavBrush;
+            InsightsNav.Background = showInsights ? SelectedNavBrush : TransparentBrush;
+            SetNavForeground(OverviewNav, !showInsights);
+            SetNavForeground(InsightsNav, showInsights);
+            Title = showInsights ? "Screeni — Insights" : "Screeni — Overview";
+        }
+        catch (Exception ex)
+        {
+            LogNav($"nav chrome ({page})", ex);
+        }
+
+        try
+        {
             OverviewRow.Height = showInsights
                 ? new GridLength(0)
                 : new GridLength(1, GridUnitType.Star);
@@ -166,37 +195,40 @@ public sealed partial class MainWindow : Window
                 ? new GridLength(1, GridUnitType.Star)
                 : new GridLength(0);
 
-            OverviewPanel.Visibility = Visibility.Visible;
-            InsightsPanel.Visibility = Visibility.Visible;
-            OverviewPanel.Opacity = 1;
-            InsightsPanel.Opacity = 1;
             OverviewPanel.IsHitTestVisible = !showInsights;
             InsightsPanel.IsHitTestVisible = showInsights;
-
-            OverviewNav.Background = showInsights ? TransparentBrush : SelectedNavBrush;
-            InsightsNav.Background = showInsights ? SelectedNavBrush : TransparentBrush;
-            SetNavForeground(OverviewNav, !showInsights);
-            SetNavForeground(InsightsNav, showInsights);
-
-            if (showInsights)
-            {
-                Insights.Refresh();
-            }
         }
         catch (Exception ex)
         {
+            LogNav($"row layout ({page})", ex);
+        }
+
+        if (showInsights)
+        {
             try
             {
-                var path = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Screeni",
-                    "nav.log");
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.AppendAllText(path, $"{DateTime.Now:o} ShowPage({page}): {ex}\n");
+                Insights.Refresh();
             }
-            catch
+            catch (Exception ex)
             {
+                LogNav("Insights.Refresh", ex);
             }
+        }
+    }
+
+    private static void LogNav(string where, Exception ex)
+    {
+        try
+        {
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Screeni",
+                "nav.log");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.AppendAllText(path, $"{DateTime.Now:o} {where}: {ex}\n");
+        }
+        catch
+        {
         }
     }
 
