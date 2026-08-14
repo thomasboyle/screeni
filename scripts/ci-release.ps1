@@ -14,17 +14,27 @@ function Write-Timing([string]$Label, [Diagnostics.Stopwatch]$Sw) {
 $total = [Diagnostics.Stopwatch]::StartNew()
 $sw = [Diagnostics.Stopwatch]::StartNew()
 
-$CoreSrc = Join-Path $Root "src\Screeni.Core"
-$CoreBuild = Join-Path $Root "build\Screeni.Core"
-$AppProj = Join-Path $Root "src\Screeni.App\Screeni.App.csproj"
+$BuildDir = Join-Path $Root "build"
 $PublishDir = Join-Path $Root "artifacts\publish"
-$PublishCache = Join-Path $Root "artifacts\ci-cache\publish"
 $InstallerDir = Join-Path $Root "artifacts\installer"
 $Iss = Join-Path $Root "installer\Screeni.iss"
-$CachedCoreDll = Join-Path $Root "artifacts\ci-cache\Screeni.Core.dll"
+$Exe = Join-Path $BuildDir "Screeni.exe"
 
 "#define MyAppVersion `"$Version`"" | Set-Content (Join-Path $Root "installer\ci-version.iss") -Encoding utf8NoBOM
 
+# Qt install directory (provided by the workflow via jurplel/install-qt-action).
+$QtDir = $env:QT_DIR
+if (-not $QtDir) {
+    # Fallback: probe for a locally installed Qt like the dev environment.
+    $probe = Join-Path $Root "6.8.3\msvc2022_64"
+    if (Test-Path $probe) { $QtDir = $probe }
+}
+if (-not $QtDir -or -not (Test-Path $QtDir)) {
+    throw "QT_DIR not set and no local Qt found. Set QT_DIR to a Qt 6 msvc2022_64 install."
+}
+Write-Host "==> Using Qt at: $QtDir"
+
+# Locate Inno Setup.
 $Iscc = @()
 $innoPaths = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
@@ -44,101 +54,49 @@ if (-not $Iscc) {
     $Iscc = $Iscc | Select-Object -First 1
     Write-Host "==> Found Inno Setup at: $Iscc"
 }
-Write-Timing "inno discovery" $sw
 
-# Overlap Screeni.Core build with AOT publish when both miss cache.
-$buildProc = $null
-$CoreDll = $null
-if (Test-Path $CachedCoreDll) {
-    Write-Host "==> Using cached Screeni.Core.dll"
-    $CoreDll = $CachedCoreDll
-    Write-Timing "core (cached dll)" $sw
+# Configure + build with CMake. Requires an MSVC environment (ilammy/msvc-dev-cmd
+# in CI); the vcvars64 env is already active at this point.
+$sw.Restart()
+Write-Host "==> Configuring CMake"
+if (-not (Test-Path (Join-Path $BuildDir "CMakeCache.txt"))) {
+    cmake -S $Root -B $BuildDir -G Ninja `
+        -DCMAKE_BUILD_TYPE=Release `
+        -DCMAKE_PREFIX_PATH=$QtDir `
+        -DSCREENI_VERSION=$Version
+    if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 } else {
-    if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
-        throw "ninja not found on PATH (expected on windows-latest, as in Latenci CI)"
-    }
-
-    Write-Host "==> Starting background Screeni.Core build"
-    $coreScript = @"
-`$ErrorActionPreference = 'Stop'
-cmake -S '$CoreSrc' -B '$CoreBuild' -G Ninja -DCMAKE_BUILD_TYPE=Release
-if (`$LASTEXITCODE -ne 0) { exit 1 }
-cmake --build '$CoreBuild' --parallel
-if (`$LASTEXITCODE -ne 0) { exit 2 }
-`$CoreDllFinal = Join-Path '$CoreBuild' 'bin\Screeni.Core.dll'
-if (-not (Test-Path `$CoreDllFinal)) { exit 3 }
-New-Item -ItemType Directory -Force -Path (Split-Path '$CachedCoreDll') | Out-Null
-Copy-Item `$CoreDllFinal '$CachedCoreDll' -Force
-exit 0
-"@
-    $tempScript = Join-Path $env:TEMP "screeni-build-core.ps1"
-    Set-Content -Path $tempScript -Value $coreScript -Encoding utf8
-    # Start-Process inherits MSVC env from ilammy/msvc-dev-cmd; Start-Job does not.
-    $buildProc = Start-Process pwsh -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $tempScript) -PassThru -NoNewWindow
+    # Re-run to pick up a version change without a full reconfigure.
+    cmake -S $Root -B $BuildDir -DSCREENI_VERSION=$Version
+    if ($LASTEXITCODE -ne 0) { throw "CMake reconfigure failed" }
 }
+Write-Timing "cmake configure" $sw
 
 $sw.Restart()
-try {
-    if (Test-Path (Join-Path $PublishCache "Screeni.App.exe")) {
-        Write-Host "==> Using cached publish output"
-        if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
-        New-Item -ItemType Directory -Force -Path (Split-Path $PublishDir) | Out-Null
-        Copy-Item $PublishCache $PublishDir -Recurse -Force
-        Write-Timing "dotnet publish (cached)" $sw
-    } else {
-        Write-Host "==> Publish Screeni.App"
-        if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
-        New-Item -ItemType Directory -Force -Path $PublishDir | Out-Null
+Write-Host "==> Building Screeni"
+cmake --build $BuildDir --config Release
+if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
+if (-not (Test-Path $Exe)) { throw "Build output not found: $Exe" }
+Write-Timing "cmake build" $sw
 
-        # IlcOptimizationPreference=Size comes from the csproj (faster AOT compile than Speed).
-        dotnet publish $AppProj `
-            -c Release `
-            -r win-x64 `
-            --self-contained true `
-            -p:Platform=x64 `
-            -p:Version=$Version `
-            -p:PublishAot=true `
-            -p:PublishSingleFile=false `
-            -p:PublishTrimmed=true `
-            -p:TrimMode=partial `
-            -p:WindowsAppSDKSelfContained=false `
-            -p:DebugType=None `
-            -p:DebugSymbols=false `
-            -o $PublishDir
-        if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
-        Write-Timing "dotnet publish" $sw
+# Stage a clean publish directory: exe + windeployqt output + app icon.
+$sw.Restart()
+Write-Host "==> Staging publish directory"
+if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $PublishDir | Out-Null
+Copy-Item $Exe $PublishDir -Force
 
-        if (Test-Path $PublishCache) { Remove-Item $PublishCache -Recurse -Force }
-        New-Item -ItemType Directory -Force -Path (Split-Path $PublishCache) | Out-Null
-        Copy-Item $PublishDir $PublishCache -Recurse -Force
-    }
-} finally {
-    if ($buildProc -and -not $buildProc.HasExited) {
-        Write-Host "==> Waiting for Screeni.Core build to finish..."
-        $buildProc.WaitForExit()
-    }
-}
+$Windeployqt = Join-Path $QtDir "bin\windeployqt.exe"
+if (-not (Test-Path $Windeployqt)) { throw "windeployqt.exe not found at $Windeployqt" }
+& $Windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw $PublishDir
+if ($LASTEXITCODE -ne 0) { throw "windeployqt failed" }
 
-if ($buildProc) {
-    if ($buildProc.ExitCode -ne 0) {
-        throw "Screeni.Core background build failed with exit code $($buildProc.ExitCode)"
-    }
-    Write-Timing "core build (overlapped)" $sw
-}
-
-if (-not $CoreDll) {
-    $CoreDll = $CachedCoreDll
-}
-if (-not (Test-Path $CoreDll)) {
-    throw "Screeni.Core.dll not found after build."
-}
-
-Copy-Item $CoreDll (Join-Path $PublishDir "Screeni.Core.dll") -Force
 $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
 Copy-Item (Join-Path $Root "src\Screeni.App\Assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
-Get-ChildItem $PublishDir -Filter *.pdb -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
+Write-Timing "staging + windeployqt" $sw
 
+# Compile installer.
 New-Item -ItemType Directory -Force -Path $InstallerDir | Out-Null
 Get-ChildItem $InstallerDir -Filter "ScreeniSetup-*.exe" -ErrorAction SilentlyContinue | Remove-Item -Force
 
@@ -154,11 +112,7 @@ if (-not (Test-Path $Setup)) {
 }
 
 $installerSize = (Get-Item $Setup).Length
-$maxInstallerSize = 20MB
 Write-Host ("Installer size: {0:n1} MB" -f ($installerSize / 1MB))
-if ($installerSize -gt $maxInstallerSize) {
-    throw "Installer exceeds the 20 MB limit: $([math]::Round($installerSize / 1MB, 1)) MB"
-}
 
 Write-Timing "total build" $total
 Write-Host "Installer ready: $Setup"

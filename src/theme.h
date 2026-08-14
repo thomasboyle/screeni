@@ -25,7 +25,7 @@ inline constexpr QColor PlantDark{0x5F, 0x6B, 0x45};
 
 inline constexpr int WindowWidth = 1024;
 inline constexpr int WindowHeight = 764;
-inline constexpr int SidebarWidth = 272;
+inline constexpr int SidebarWidth = 216;
 
 inline QString globalStyleSheet()
 {
@@ -43,9 +43,9 @@ inline QString globalStyleSheet()
         "}"
         "QPushButton:hover { background-color: #FFFBF3; border-color: #6B744F; }"
         "QPushButton:pressed { background-color: #E8DFD0; border: 2px solid #6B744F; }"
-        "QPushButton#nav { background: transparent; border: none; border-radius: 4px; text-align: left; padding: 0 14px; min-height: 44px; }"
+        "QPushButton#nav { background: transparent; border: none; border-radius: 4px; text-align: center; padding: 0 14px; min-height: 44px; }"
         "QPushButton#nav:hover { background-color: #C2C3A2; }"
-        "QPushButton#navSelected { background-color: #A8AA8C; border: none; border-radius: 4px; text-align: left; padding: 0 14px; min-height: 44px; }"
+        "QPushButton#nav[navSelected=\"true\"] { background-color: #A8AA8C; border: none; border-left: 4px solid #5F6B45; border-right: 4px solid #5F6B45; border-radius: 4px; text-align: center; padding: 0 10px; min-height: 44px; }"
         "QPushButton#toggle { min-width: 72px; min-height: 40px; }"
         "QPushButton#toggleChecked { background-color: #A8AA8C; border: 1px solid #2A3220; min-width: 72px; min-height: 40px; }"
         "QFrame#card { background-color: #F7F0E2; border: 1px solid #A7A28B; border-radius: 10px; }"

@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.21)
-project(Screeni VERSION 1.0.0 LANGUAGES CXX C)
+
+# Allow CI to override the version: -DSCREENI_VERSION=x.y.z
+set(SCREENI_VERSION "1.0.0" CACHE STRING "Screeni version")
+project(Screeni VERSION ${SCREENI_VERSION} LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -44,15 +47,17 @@ add_executable(Screeni WIN32
   src/ui/BarChart.cpp
   src/services/TrayService.cpp
   src/services/Autostart.cpp
+  src/services/UpdateService.cpp
   resources/resources.qrc
   ${SCREENI_SQLITE_SOURCES}
 )
 
 target_include_directories(Screeni PRIVATE src ${SCREENI_CORE_INCLUDE} src/ui src/services)
 target_link_libraries(Screeni PRIVATE Qt6::Widgets Qt6::Network ${SCREENI_SQLITE_LIBS})
+target_compile_definitions(Screeni PRIVATE SCREENI_VERSION="${PROJECT_VERSION}")
 
 if(WIN32)
-  target_link_libraries(Screeni PRIVATE user32 shell32 ole32 version advapi32 gdi32)
+  target_link_libraries(Screeni PRIVATE user32 shell32 ole32 version advapi32 gdi32 dwmapi)
   target_compile_definitions(Screeni PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()
 

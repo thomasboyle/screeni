@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/tracker.h"
+#include "services/UpdateService.h"
 #include "ui/InsightsPage.h"
 #include "ui/OverviewPage.h"
 #include "ui/SettingsPanel.h"
@@ -10,6 +11,7 @@
 #include <QTimer>
 
 class QLabel;
+class QProgressBar;
 class QPushButton;
 class QStackedWidget;
 
@@ -30,9 +32,14 @@ private slots:
     void refreshAll();
     void onTrayShow();
     void onTrayExit();
+    void onUpdateStateChanged();
+    void installUpdate();
+    void dismissUpdate();
 private:
     void buildSidebar(QWidget* sidebar);
     void setNavSelected(QPushButton* selected);
+    void buildUpdateBubble(QWidget* parent);
+    void refreshUpdateBubble();
     Tracker& tracker_;
     OverviewPage* overview_ = nullptr;
     InsightsPage* insights_ = nullptr;
@@ -43,6 +50,11 @@ private:
     QPushButton* insightsNav_ = nullptr;
     QPushButton* settingsNav_ = nullptr;
     TrayService* tray_ = nullptr;
+    UpdateService* updates_ = nullptr;
+    QWidget* updateBubble_ = nullptr;
+    QLabel* updateBubbleText_ = nullptr;
+    QProgressBar* updateBubbleProgress_ = nullptr;
+    QPushButton* updateBubbleAction_ = nullptr;
     QTimer refreshTimer_;
     bool quitting_ = false;
 };

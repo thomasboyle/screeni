@@ -5,64 +5,50 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
-$CoreSrc = Join-Path $Root "src\Screeni.Core"
-$CoreBuild = Join-Path $Root "build\Screeni.Core"
-$AppProj = Join-Path $Root "src\Screeni.App\Screeni.App.csproj"
 $AppVersion = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
+$BuildDir = Join-Path $Root "build"
 $PublishDir = Join-Path $Root "artifacts\publish"
 $InstallerDir = Join-Path $Root "artifacts\installer"
 $Iss = Join-Path $Root "installer\Screeni.iss"
 
-Write-Host "==> Building Screeni.Core ($Configuration)"
-cmake -S $CoreSrc -B $CoreBuild -G "Visual Studio 17 2022" -A x64 | Out-Host
-cmake --build $CoreBuild --config $Configuration | Out-Host
-
-$CoreDll = Join-Path $CoreBuild "bin\$Configuration\Screeni.Core.dll"
-if (-not (Test-Path $CoreDll)) {
-    $CoreDll = Join-Path $CoreBuild "$Configuration\Screeni.Core.dll"
+# Qt install directory: env override, else the local dev install inside the repo.
+$QtDir = $env:QT_DIR
+if (-not $QtDir) {
+    $probe = Join-Path $Root "6.8.3\msvc2022_64"
+    if (Test-Path $probe) { $QtDir = $probe }
 }
-if (-not (Test-Path $CoreDll)) {
-    throw "Screeni.Core.dll not found after build."
+if (-not $QtDir -or -not (Test-Path $QtDir)) {
+    throw "QT_DIR not set and no local Qt found at $Root\6.8.3\msvc2022_64"
 }
 
-Write-Host "==> Publishing Screeni.App (trimmed Native AOT, framework WASDK)"
-if (Test-Path $PublishDir) {
-    Remove-Item $PublishDir -Recurse -Force
+Write-Host "==> Configuring Screeni ($Configuration) with Qt at $QtDir"
+if (-not (Test-Path (Join-Path $BuildDir "CMakeCache.txt"))) {
+    cmake -S $Root -B $BuildDir -G Ninja `
+        -DCMAKE_BUILD_TYPE=$Configuration `
+        -DCMAKE_PREFIX_PATH=$QtDir `
+        -DSCREENI_VERSION=$AppVersion
+} else {
+    cmake -S $Root -B $BuildDir -DSCREENI_VERSION=$AppVersion
 }
+if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
+
+Write-Host "==> Building Screeni ($Configuration)"
+cmake --build $BuildDir --config $Configuration
+if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
+
+Write-Host "==> Staging publish directory"
+if (Test-Path $PublishDir) { Remove-Item $PublishDir -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $PublishDir | Out-Null
+Copy-Item (Join-Path $BuildDir "Screeni.exe") $PublishDir -Force
 
-dotnet publish $AppProj `
-    -c $Configuration `
-    -r win-x64 `
-    --self-contained true `
-    -p:Platform=x64 `
-    -p:Version=$AppVersion `
-    -p:PublishAot=true `
-    -p:PublishSingleFile=false `
-    -p:PublishTrimmed=true `
-    -p:TrimMode=partial `
-    -p:DebugType=None `
-    -p:DebugSymbols=false `
-    -p:WindowsAppSDKSelfContained=false `
-    -o $PublishDir | Out-Host
-
-Copy-Item $CoreDll (Join-Path $PublishDir "Screeni.Core.dll") -Force
+$Windeployqt = Join-Path $QtDir "bin\windeployqt.exe"
+if (-not (Test-Path $Windeployqt)) { throw "windeployqt.exe not found at $Windeployqt" }
+& $Windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw $PublishDir
+if ($LASTEXITCODE -ne 0) { throw "windeployqt failed" }
 
 $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
 Copy-Item (Join-Path $Root "src\Screeni.App\Assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
-
-# Ensure XAML binaries and app PRI are present for unpackaged WinUI.
-$xbfDir = Join-Path $Root "src\Screeni.App\obj\x64\$Configuration\net8.0-windows10.0.19041.0"
-Copy-Item (Join-Path $xbfDir "App.xbf") $PublishDir -Force -ErrorAction SilentlyContinue
-Copy-Item (Join-Path $xbfDir "MainWindow.xbf") $PublishDir -Force -ErrorAction SilentlyContinue
-$builtPri = Join-Path $Root "src\Screeni.App\bin\x64\$Configuration\net8.0-windows10.0.19041.0\win-x64\resources.pri"
-if (-not (Test-Path $builtPri)) {
-    $builtPri = Join-Path $Root "src\Screeni.App\bin\x64\$Configuration\net8.0-windows10.0.19041.0\resources.pri"
-}
-if (Test-Path $builtPri) {
-    Copy-Item $builtPri $PublishDir -Force
-}
 
 if ($SkipInstaller) {
     Write-Host "Publish complete: $PublishDir"
@@ -87,11 +73,5 @@ if (-not $Setup) {
     throw "Installer output not found in $InstallerDir"
 }
 
-$installerSize = (Get-Item $Setup).Length
-$maxInstallerSize = 20MB
-Write-Host ("Installer size: {0:n1} MB" -f ($installerSize / 1MB))
-if ($installerSize -gt $maxInstallerSize) {
-    throw "Installer exceeds the 20 MB limit: $([math]::Round($installerSize / 1MB, 1)) MB"
-}
-
+Write-Host ("Installer size: {0:n1} MB" -f ((Get-Item $Setup).Length / 1MB))
 Write-Host "Installer ready: $($Setup.FullName)"

@@ -14,7 +14,7 @@
 SettingsPanel::SettingsPanel(QWidget* parent) : QWidget(parent)
 {
     setAttribute(Qt::WA_StyledBackground, true);
-    setStyleSheet(QStringLiteral("background-color: rgba(0,0,0,0.27);"));
+    setStyleSheet(QStringLiteral("background-color: transparent;"));
 
     auto* outer = new QHBoxLayout(this);
     outer->setContentsMargins(0, 34, 35, 0);

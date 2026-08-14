@@ -26,6 +26,8 @@ target/
 # Build artifacts
 dist/
 build/
+6.8.3/
+artifacts/
 *.pyc
 *.class
 *.o

@@ -21,7 +21,7 @@ void BarChart::setBars(const QVector<ChartBarData>& bars)
 
 QSize BarChart::sizeHint() const
 {
-    const int n = std::max(1, bars_.size());
+    const int n = std::max(1, static_cast<int>(bars_.size()));
     const int w = n * (barWidth_ + 4) + axisWidth_ + 8;
     return QSize(w, plotHeight_ + 40);
 }

@@ -1,4 +1,5 @@
 #include "core/tracker.h"
+#include "services/UpdateService.h"
 #include "theme.h"
 #include "ui/MainWindow.h"
 

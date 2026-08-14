@@ -1,5 +1,8 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
-  <qresource prefix="/">
+  <qresource prefix="/assets">
+    <file alias="Screeni.ico">../assets/Screeni.ico</file>
+    <file alias="Fonts/Monocraft.ttf">../assets/Fonts/Monocraft.ttf</file>
+    <file alias="Fonts/Monocraft-Bold.ttf">../assets/Fonts/Monocraft-Bold.ttf</file>
   </qresource>
 </RCC>

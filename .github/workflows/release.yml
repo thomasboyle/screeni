@@ -10,8 +10,7 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    # Maximum LZMA2 compression takes longer than the previous ZIP packaging.
-    timeout-minutes: 5
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v5
@@ -41,38 +40,16 @@ jobs:
           "#define MyAppVersion `"$next`"" | Set-Content installer/ci-version.iss -Encoding utf8NoBOM
           Write-Host "Next version: $next"
 
-      - uses: actions/cache@v5
-        id: nuget-cache
+      # Install Qt msvc2022_64 and expose the install dir via QT_DIR.
+      - uses: jurplel/install-qt-action@v4
         with:
-          path: |
-            ~/.nuget/packages
-            ~/.nuget/global-packages
-          key: nuget-${{ hashFiles('**/*.csproj', '**/*.props') }}
-          restore-keys: |
-            nuget-${{ hashFiles('**/*.csproj', '**/*.props') }}
-            nuget-
-
-      - uses: actions/cache@v5
-        id: publish-cache
-        with:
-          path: artifacts/ci-cache/publish
-          key: publish-${{ runner.os }}-${{ hashFiles('src/Screeni.App/**', '!src/Screeni.App/bin/**', '!src/Screeni.App/obj/**') }}-${{ steps.version.outputs.version }}
-          restore-keys: |
-            publish-${{ runner.os }}-${{ hashFiles('src/Screeni.App/**', '!src/Screeni.App/bin/**', '!src/Screeni.App/obj/**') }}-
-            publish-${{ runner.os }}-
-
-      - uses: actions/cache@v5
-        id: core-dll
-        with:
-          path: artifacts/ci-cache/Screeni.Core.dll
-          key: core-dll-${{ runner.os }}-${{ hashFiles('src/Screeni.Core/**', '!src/Screeni.Core/build/**') }}
-          restore-keys: |
-            core-dll-${{ runner.os }}-${{ hashFiles('src/Screeni.Core/**', '!src/Screeni.Core/build/**') }}
-            core-dll-${{ runner.os }}-
+          version: '6.8.3'
+          arch: 'win64_msvc2022_64'
+          cache: true
+          set-env: true
 
       # Expose pre-installed MSVC (~2s) instead of downloading Build Tools (~70s).
       - uses: ilammy/msvc-dev-cmd@v1
-        if: steps.core-dll.outputs.cache-hit != 'true'
         with:
           arch: x64
 
