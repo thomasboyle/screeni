@@ -56,9 +56,12 @@ function ForceCloseScreeni: Boolean;
 var
   ResultCode: Integer;
 begin
+  // Note: no /T here. The installer is launched by Screeni (via QProcess), so it
+  // is a child of the Screeni.exe process tree. Using /T would kill the installer
+  // itself as well as the app, aborting the update before any files are replaced.
   Result := Exec(
     ExpandConstant('{sys}\taskkill.exe'),
-    '/F /T /IM Screeni.exe',
+    '/F /IM Screeni.exe',
     '',
     SW_HIDE,
     ewWaitUntilTerminated,
