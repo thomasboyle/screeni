@@ -12,12 +12,12 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Title Bar Glow Line -->
+            <!-- Title Bar Glow Line — matcha -->
             <Border Height="4"
                     VerticalAlignment="Top"
                     Background="{StaticResource TitleBarGlowBrush}"
-                    Opacity="0.8"/>
-            
+                    Opacity="0.55"/>
+
             <Grid Grid.Column="0" Background="{StaticResource SidebarBackgroundBrush}">
                 <Canvas IsHitTestVisible="False"
                         Width="242"
@@ -71,7 +71,6 @@
                                 <TextBlock Text="Screeni"
                                            Style="{StaticResource DisplayTitleTextStyle}"
                                            FontSize="20"
-                                           FontWeight="Bold"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                         </Border>
@@ -84,10 +83,9 @@
                             Background="{StaticResource SurfaceBrush}"
                             BorderBrush="{StaticResource BorderSoftBrush}"
                             BorderThickness="1"
-                            CornerRadius="16">
+                            CornerRadius="10">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="4">
-                                <!-- Tiny pink leaf icon -->
                                 <TextBlock Text="🌿"
                                            FontSize="13"
                                            Foreground="{StaticResource PlantMidBrush}"
@@ -98,14 +96,13 @@
                             </StackPanel>
                             <TextBlock Text="{x:Bind ViewModel.TodayTotalText, Mode=OneWay}"
                                        FontFamily="{StaticResource AppFont}"
-                                       FontSize="40"
-                                       FontWeight="ExtraBold"
+                                       FontSize="36"
+                                       FontWeight="Normal"
                                        Foreground="{StaticResource InkBrush}"
                                        Margin="0,12,0,0" />
                             <StackPanel Orientation="Horizontal"
                                         Spacing="7"
                                         Margin="0,10,0,0">
-                                <!-- Calendar outline icon -->
                                 <SymbolIcon Symbol="Calendar"
                                             Width="16"
                                             Height="16"
@@ -120,25 +117,23 @@
                     <StackPanel Grid.Row="2"
                                 Margin="19,20,19,0"
                                 Spacing="4">
-                        <!-- Overview - active with salmon fill gradient -->
+                        <!-- Overview — selected matcha stipple -->
                         <Button x:Name="OverviewNav"
-                                Height="45"
+                                Height="44"
                                 Style="{StaticResource NavButtonStyle}"
                                 Background="{StaticResource AccentFillBrush}">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <SymbolIcon Symbol="Home"
                                             Width="20"
                                             Height="20"
-                                            Foreground="White" />
+                                            Foreground="{StaticResource NavSelectedForegroundBrush}" />
                                 <TextBlock Text="Overview"
                                            Style="{StaticResource BodyTextStyle}"
-                                           Foreground="White"
-                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource NavSelectedForegroundBrush}"
                                            VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
-                        <!-- Insights - inactive -->
-                        <Button Height="45"
+                        <Button Height="44"
                                 Style="{StaticResource NavButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <SymbolIcon Symbol="List"
@@ -150,8 +145,7 @@
                                            VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
-                        <!-- Apps - inactive -->
-                        <Button Height="45"
+                        <Button Height="44"
                                 Style="{StaticResource NavButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <SymbolIcon Symbol="AllApps"
@@ -163,8 +157,7 @@
                                            VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
-                        <!-- Settings - inactive -->
-                        <Button Height="45"
+                        <Button Height="44"
                                 Style="{StaticResource NavButtonStyle}"
                                 Click="SettingsNavButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="16">
@@ -198,12 +191,10 @@
                     <TextBlock Grid.Row="0"
                                Text="Overview"
                                Style="{StaticResource DisplayTitleTextStyle}"
-                               FontSize="30"
-                               FontWeight="Bold"
+                               FontSize="26"
                                VerticalAlignment="Center" />
 
                     <Grid Grid.Row="1" Margin="0,10,0,0" Height="40">
-                        <!-- Segmented toggle: Day | Week -->
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <ToggleButton x:Name="DayToggle"
                                           Content="Day"
@@ -219,15 +210,12 @@
                                           Click="WeekButton_Click" />
                         </StackPanel>
 
-                        <!-- Date controls -->
                         <StackPanel Orientation="Horizontal"
                                     HorizontalAlignment="Right"
                                     Spacing="10">
-                            <!-- Date dropdown button -->
                             <Button Width="140"
                                     Height="40"
-                                    Style="{StaticResource PixelButtonStyle}"
-                                    CornerRadius="10">
+                                    Style="{StaticResource PixelButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <SymbolIcon Symbol="Calendar"
                                                 Width="16"
@@ -242,12 +230,10 @@
                                               Foreground="{StaticResource InkMutedBrush}" />
                                 </StackPanel>
                             </Button>
-                            <!-- Navigation chevrons -->
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <Button Width="40"
                                         Height="40"
-                                        Style="{StaticResource PixelButtonStyle}"
-                                        CornerRadius="10">
+                                        Style="{StaticResource PixelButtonStyle}">
                                     <FontIcon Glyph="&#xE76B;"
                                               FontSize="14"
                                               VerticalAlignment="Center"
@@ -255,8 +241,7 @@
                                 </Button>
                                 <Button Width="40"
                                         Height="40"
-                                        Style="{StaticResource PixelButtonStyle}"
-                                        CornerRadius="10">
+                                        Style="{StaticResource PixelButtonStyle}">
                                     <FontIcon Glyph="&#xE76C;"
                                               FontSize="14"
                                               VerticalAlignment="Center"
@@ -273,20 +258,18 @@
                             Background="{StaticResource SurfaceBrush}"
                             BorderBrush="{StaticResource BorderSoftBrush}"
                             BorderThickness="1"
-                            CornerRadius="16">
+                            CornerRadius="10">
                         <Grid>
                             <TextBlock Text="Screen Time"
                                        Style="{StaticResource SectionTitleTextStyle}"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
+                                       FontSize="16"
                                        VerticalAlignment="Top" />
 
-                            <!-- Decorative glassy sprout illustration top-right -->
                             <Canvas Width="60"
                                     Height="60"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Top"
-                                    Opacity="0.5"
+                                    Opacity="0.45"
                                     IsHitTestVisible="False">
                                 <Path Fill="{StaticResource PlantMidBrush}"
                                       Data="M30,55 C30,35 32,20 40,5 C42,22 38,40 32,55 Z M36,25 C36,12 44,6 56,6 C54,18 48,25 38,28 Z M32,35 C20,25 10,25 4,30 C10,42 20,45 34,40 Z"/>
@@ -299,7 +282,6 @@
                                 </Grid.ColumnDefinitions>
 
                                 <Grid Grid.Column="0">
-                                    <!-- Y-axis gridlines -->
                                     <Border Height="1"
                                             VerticalAlignment="Top"
                                             Margin="0,30,0,0"
@@ -308,12 +290,10 @@
                                             VerticalAlignment="Top"
                                             Margin="0,90,0,0"
                                             Background="{StaticResource DashSoftBrush}" />
-                                    <Border Height="1"
-                                            VerticalAlignment="Top"
+                                    <Border Height="1"égime="Top"
                                             Margin="0,150,0,0"
-                                            Background="{StaticResource BorderStrongBrush}" />
+                                            Background="{StaticResource BorderSoftBrush}" />
 
-                                    <!-- Hour bars -->
                                     <ItemsRepeater ItemsSource="{x:Bind ViewModel.Bars, Mode=OneWay}">
                                         <ItemsRepeater.Layout>
                                             <UniformGridLayout x:Name="ChartLayout"
@@ -333,25 +313,23 @@
                                                         <RowDefinition Height="20" />
                                                     </Grid.RowDefinitions>
 
-                                                    <!-- Bar with gradient fill and rounded top -->
                                                     <Rectangle VerticalAlignment="Bottom"
                                                                HorizontalAlignment="Center"
                                                                Width="{x:Bind BarWidth}"
                                                                Height="{x:Bind BarHeight}"
-                                                               RadiusX="4"
-                                                               RadiusY="4"
+                                                               RadiusX="3"
+                                                               RadiusY="3"
                                                                Fill="{StaticResource AccentBrush}"
-                                                               Stroke="#DE8686"
+                                                               Stroke="{StaticResource AccentDeepBrush}"
                                                                StrokeThickness="1" />
-                                                    
-                                                    <!-- Baseline for zero-usage hours -->
+
                                                     <Rectangle Grid.Row="0"
                                                                VerticalAlignment="Bottom"
                                                                Height="1"
                                                                StrokeDashArray="4,2"
                                                                Stroke="{StaticResource FrameBrush}"
                                                                Opacity="0.5"/>
-                                                               
+
                                                     <TextBlock Grid.Row="2"
                                                                Text="{x:Bind Label}"
                                                                Style="{StaticResource AxisTextStyle}"
@@ -361,8 +339,7 @@
                                             </DataTemplate>
                                         </ItemsRepeater.ItemTemplate>
                                     </ItemsRepeater>
-                                    
-                                    <!-- X-axis label "24" -->
+
                                     <TextBlock Text="24"
                                                Style="{StaticResource AxisTextStyle}"
                                                HorizontalAlignment="Right"
@@ -370,7 +347,6 @@
                                                Margin="0,0,0,5" />
                                 </Grid>
 
-                                <!-- Y-axis labels -->
                                 <Canvas Grid.Column="1"
                                         Height="150"
                                         VerticalAlignment="Top"
@@ -398,24 +374,21 @@
                             Background="{StaticResource SurfaceBrush}"
                             BorderBrush="{StaticResource BorderSoftBrush}"
                             BorderThickness="1"
-                            CornerRadius="16">
+                            CornerRadius="10">
                         <Grid>
                             <Grid Height="64"
                                   Padding="28,0"
                                   VerticalAlignment="Top">
                                 <TextBlock Text="Top Apps"
                                            Style="{StaticResource SectionTitleTextStyle}"
-                                           FontSize="18"
-                                           FontWeight="SemiBold"
+                                           FontSize="16"
                                            VerticalAlignment="Center" />
-                                <!-- Show all ghost button -->
                                 <Button Width="100"
-                                        Height="36"
+                                        Height="34"
                                         HorizontalAlignment="Right"
                                         Style="{StaticResource PixelButtonStyle}"
-                                        CornerRadius="10"
                                         Background="{StaticResource AccentTintBrush}"
-                                        BorderBrush="{StaticResource AccentBorderBrush}">
+                                        BorderBrush="{StaticResource BorderStrongBrush}">
                                     <TextBlock Text="Show all"
                                                Style="{StaticResource BodyTextStyle}"
                                                Foreground="{StaticResource AccentDeepBrush}"
@@ -446,13 +419,12 @@
                                                     <ColumnDefinition Width="20" />
                                                 </Grid.ColumnDefinitions>
 
-                                                <!-- App icon with rounded border -->
                                                 <Border Width="40"
                                                         Height="40"
                                                         Background="{StaticResource SurfaceBrush}"
                                                         BorderBrush="{StaticResource BorderSoftBrush}"
                                                         BorderThickness="1"
-                                                        CornerRadius="10"
+                                                        CornerRadius="8"
                                                         VerticalAlignment="Center">
                                                     <Grid>
                                                         <Image Source="{x:Bind Icon}"
@@ -463,22 +435,20 @@
                                                         <TextBlock Text="{x:Bind Initial}"
                                                                    Visibility="{x:Bind InitialVisibility}"
                                                                    FontFamily="{StaticResource AppFont}"
-                                                                   FontSize="18"
+                                                                   FontSize="16"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
                                                                    Foreground="{StaticResource InkBrush}" />
                                                     </Grid>
                                                 </Border>
 
-                                                <!-- App name (truncate with ellipsis) -->
                                                 <TextBlock Grid.Column="1"
                                                            Text="{x:Bind Name}"
                                                            Style="{StaticResource BodyTextStyle}"
-                                                           FontSize="15"
+                                                           FontSize="14"
                                                            VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis" />
 
-                                                <!-- Proportional usage bar -->
                                                 <ProgressBar Grid.Column="2"
                                                              Style="{StaticResource PixelBarStyle}"
                                                              Value="{x:Bind Share}"
@@ -486,7 +456,6 @@
                                                              CornerRadius="4"
                                                              VerticalAlignment="Center" />
 
-                                                <!-- Right-aligned duration (muted) -->
                                                 <TextBlock Grid.Column="3"
                                                            Text="{x:Bind DurationText}"
                                                            Style="{StaticResource MutedTextStyle}"
@@ -494,7 +463,6 @@
                                                            TextAlignment="Right"
                                                            VerticalAlignment="Center" />
 
-                                                <!-- Chevron -->
                                                 <FontIcon Grid.Column="4"
                                                           Glyph="&#xE76C;"
                                                           FontSize="14"
@@ -526,10 +494,10 @@
                 <StackPanel Spacing="5">
                     <TextBlock Text="Update available"
                                Style="{StaticResource SectionTitleTextStyle}"
-                               FontSize="19" />
+                               FontSize="16" />
                     <TextBlock x:Name="UpdateVersionText"
                                Style="{StaticResource MutedTextStyle}"
-                               FontSize="16" />
+                               FontSize="13" />
                     <TextBlock x:Name="UpdateMessageText"
                                Text="Click to download and install"
                                Style="{StaticResource BodyTextStyle}"
