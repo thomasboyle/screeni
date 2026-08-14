@@ -1,0 +1,6 @@
+// Screeni Windows application resources.
+// Embeds the app icon into Screeni.exe so Windows shows it in the taskbar,
+// Alt-Tab, and the file manager rather than the generic default icon.
+
+// Icon (1 = IDI_ICON1, the standard application icon id).
+IDI_ICON1 ICON "../assets/Screeni.ico"

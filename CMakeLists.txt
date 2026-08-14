@@ -52,6 +52,12 @@ add_executable(Screeni WIN32
   ${SCREENI_SQLITE_SOURCES}
 )
 
+# Embed the app icon (and other Windows resources) into the exe so the
+# taskbar / Alt-Tab show the Screeni icon instead of the generic default.
+if(WIN32)
+  target_sources(Screeni PRIVATE src/app.rc)
+endif()
+
 target_include_directories(Screeni PRIVATE src ${SCREENI_CORE_INCLUDE} src/ui src/services)
 target_link_libraries(Screeni PRIVATE Qt6::Widgets Qt6::Network ${SCREENI_SQLITE_LIBS})
 target_compile_definitions(Screeni PRIVATE SCREENI_VERSION="${PROJECT_VERSION}")
