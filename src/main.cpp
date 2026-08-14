@@ -5,8 +5,10 @@
 
 #include <QApplication>
 #include <QFontDatabase>
+#include <QLockFile>
 #include <QMessageBox>
 #include <QSettings>
+#include <QStandardPaths>
 
 int main(int argc, char* argv[])
 {
@@ -14,6 +16,16 @@ int main(int argc, char* argv[])
     QApplication::setApplicationName(QStringLiteral("Screeni"));
     QApplication::setOrganizationName(QStringLiteral("Screeni"));
     QApplication::setQuitOnLastWindowClosed(false);
+
+    const QString lockPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation)
+        + QLatin1String("/screeni.lock");
+    QLockFile lock(lockPath);
+    lock.setStaleLockTime(0);
+    if (!lock.tryLock(100)) {
+        QMessageBox::information(nullptr, QStringLiteral("Screeni"),
+                                 QStringLiteral("Screeni is already running."));
+        return 0;
+    }
 
     const int fontId = QFontDatabase::addApplicationFont(QStringLiteral(":/assets/Fonts/Monocraft.ttf"));
     if (fontId >= 0) {

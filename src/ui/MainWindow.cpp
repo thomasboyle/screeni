@@ -247,6 +247,7 @@ void MainWindow::onTrayExit()
 {
     quitting_ = true;
     close();
+    qApp->quit();
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
