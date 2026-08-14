@@ -8,32 +8,34 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <FontFamily x:Key="AppFont">Segoe UI Variable Text</FontFamily>
-            <FontFamily x:Key="PixelFont">Segoe UI Variable Text</FontFamily>
+            <!-- Monocraft (OFL) — shared with Compressi -->
+            <FontFamily x:Key="AppFont">/Assets/Fonts/Monocraft.ttf#Monocraft</FontFamily>
+            <FontFamily x:Key="PixelFont">/Assets/Fonts/Monocraft.ttf#Monocraft</FontFamily>
 
-            <!-- Color Palette: Soft pastel periwinkle/salmon clay-glassmorphism -->
-            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#E4E8F3" />
-            <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#C7CCDE" />
-            <SolidColorBrush x:Key="SurfaceBrush" Color="#E9ECF6" />
-            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F0F2FA" />
-            <SolidColorBrush x:Key="SurfacePressedBrush" Color="#E0E4F0" />
-            <SolidColorBrush x:Key="FrameBrush" Color="#C4C9DA" />
-            <SolidColorBrush x:Key="InkBrush" Color="#2F3547" />
-            <SolidColorBrush x:Key="InkMutedBrush" Color="#7E869E" />
-            <SolidColorBrush x:Key="BorderSoftBrush" Color="#B3FFFFFF" />
-            <SolidColorBrush x:Key="BorderStrongBrush" Color="#C4C9DA" />
-            <SolidColorBrush x:Key="AccentBrush" Color="#E59B9B" />
-            <SolidColorBrush x:Key="AccentDeepBrush" Color="#DE8686" />
-            <SolidColorBrush x:Key="AccentTintBrush" Color="#F6DEDC" />
-            <SolidColorBrush x:Key="AccentFillBrush" Color="#E79F98" />
-            <SolidColorBrush x:Key="AccentFillHoverBrush" Color="#E08B8B" />
-            <SolidColorBrush x:Key="AccentBorderBrush" Color="#DE8686" />
-            <SolidColorBrush x:Key="DashBrush" Color="#A7AF85" />
-            <SolidColorBrush x:Key="DashSoftBrush" Color="#0F000000" />
-            <SolidColorBrush x:Key="PlantLightBrush" Color="#D4DFF5" />
-            <SolidColorBrush x:Key="PlantMidBrush" Color="#E59B9B" />
-            <SolidColorBrush x:Key="PlantDarkBrush" Color="#C9B8D9" />
-            <SolidColorBrush x:Key="TitleBarGlowBrush" Color="#F07070" />
+            <!-- Compressi matcha / 8-bit cottagecore palette -->
+            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#E8DFD0" />
+            <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#E0D8C8" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#F7F0E2" />
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#FFFBF3" />
+            <SolidColorBrush x:Key="SurfacePressedBrush" Color="#E8DFD0" />
+            <SolidColorBrush x:Key="FrameBrush" Color="#A7A28B" />
+            <SolidColorBrush x:Key="InkBrush" Color="#2A3220" />
+            <SolidColorBrush x:Key="InkMutedBrush" Color="#5A564C" />
+            <SolidColorBrush x:Key="BorderSoftBrush" Color="#A7A28B" />
+            <SolidColorBrush x:Key="BorderStrongBrush" Color="#6B744F" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#8F9A6E" />
+            <SolidColorBrush x:Key="AccentDeepBrush" Color="#6A744C" />
+            <SolidColorBrush x:Key="AccentTintBrush" Color="#E8ECD9" />
+            <SolidColorBrush x:Key="AccentFillBrush" Color="#A8AA8C" />
+            <SolidColorBrush x:Key="AccentFillHoverBrush" Color="#C2C3A2" />
+            <SolidColorBrush x:Key="AccentBorderBrush" Color="#2A3220" />
+            <SolidColorBrush x:Key="DashBrush" Color="#8F9A6E" />
+            <SolidColorBrush x:Key="DashSoftBrush" Color="#33000000" />
+            <SolidColorBrush x:Key="PlantLightBrush" Color="#C2C3A2" />
+            <SolidColorBrush x:Key="PlantMidBrush" Color="#8F9A6E" />
+            <SolidColorBrush x:Key="PlantDarkBrush" Color="#5F6B45" />
+            <SolidColorBrush x:Key="TitleBarGlowBrush" Color="#8F9A6E" />
+            <SolidColorBrush x:Key="NavSelectedForegroundBrush" Color="#2A3220" />
 
             <Style x:Key="BodyTextStyle" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
@@ -43,15 +45,15 @@
 
             <Style x:Key="DisplayTitleTextStyle" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
-                <Setter Property="FontSize" Value="30" />
-                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="FontSize" Value="26" />
+                <Setter Property="FontWeight" Value="Normal" />
                 <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
             </Style>
 
             <Style x:Key="SectionTitleTextStyle" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
                 <Setter Property="FontSize" Value="16" />
-                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="FontWeight" Value="Normal" />
                 <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
             </Style>
 
@@ -74,7 +76,7 @@
                 <Setter Property="Padding" Value="12,6" />
                 <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource BorderSoftBrush}" />
-                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderThickness" Value="1,1,1,2" />
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
@@ -95,6 +97,7 @@
                                             <VisualState.Setters>
                                                 <Setter Target="Shell.Background" Value="{StaticResource SurfacePressedBrush}" />
                                                 <Setter Target="Shell.BorderBrush" Value="{StaticResource BorderStrongBrush}" />
+                                                <Setter Target="Shell.BorderThickness" Value="2" />
                                             </VisualState.Setters>
                                         </VisualState>
                                         <VisualState x:Name="Disabled">
@@ -106,10 +109,10 @@
                                 </VisualStateManager.VisualStateGroups>
 
                                 <Border x:Name="Shell"
-                                        Background="{StaticResource SurfaceBrush}"
-                                        BorderBrush="{StaticResource BorderSoftBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="7">
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="4">
                                     <ContentPresenter x:Name="Presenter"
                                                       Padding="{TemplateBinding Padding}"
                                                       Content="{TemplateBinding Content}"
@@ -123,7 +126,7 @@
                 </Setter>
             </Style>
 
-            <!-- Segmented range selector: filled sage when checked, cream when not. -->
+            <!-- Segmented range selector: matcha stipple when checked -->
             <Style x:Key="PixelToggleStyle" TargetType="ToggleButton">
                 <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
                 <Setter Property="FontSize" Value="14" />
@@ -184,7 +187,7 @@
                                         Background="{StaticResource SurfaceBrush}"
                                         BorderBrush="{StaticResource BorderSoftBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="6">
+                                        CornerRadius="4">
                                     <ContentPresenter x:Name="Presenter"
                                                       Padding="{TemplateBinding Padding}"
                                                       Content="{TemplateBinding Content}"
@@ -216,12 +219,12 @@
                                         <VisualState x:Name="Normal" />
                                         <VisualState x:Name="PointerOver">
                                             <VisualState.Setters>
-                                                <Setter Target="Shell.Background" Value="{StaticResource SurfaceHoverBrush}" />
+                                                <Setter Target="Shell.Background" Value="{StaticResource AccentFillHoverBrush}" />
                                             </VisualState.Setters>
                                         </VisualState>
                                         <VisualState x:Name="Pressed">
                                             <VisualState.Setters>
-                                                <Setter Target="Shell.Background" Value="{StaticResource SurfacePressedBrush}" />
+                                                <Setter Target="Shell.Background" Value="{StaticResource AccentFillBrush}" />
                                             </VisualState.Setters>
                                         </VisualState>
                                     </VisualStateGroup>
@@ -229,7 +232,7 @@
 
                                 <Border x:Name="Shell"
                                         Background="{TemplateBinding Background}"
-                                        CornerRadius="8">
+                                        CornerRadius="4">
                                     <ContentPresenter Padding="{TemplateBinding Padding}"
                                                       Content="{TemplateBinding Content}"
                                                       ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -335,8 +338,8 @@
                                         Height="20"
                                         Background="{StaticResource SurfaceBrush}"
                                         BorderBrush="{StaticResource BorderSoftBrush}"
-                                        BorderThickness="2"
-                                        CornerRadius="2"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
                                         VerticalAlignment="Center">
                                     <Rectangle x:Name="Tick"
                                                Width="8"
