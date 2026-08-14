@@ -1,130 +1,448 @@
-using System.Diagnostics;
-using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Screeni.Services;
 
+public enum AppUpdateStatus
+{
+    UpToDate,
+    Checking,
+    Available,
+    Downloading,
+    Installing,
+    Failed,
+}
+
+public sealed class AppUpdateInfo
+{
+    public required Version Version { get; init; }
+
+    public required string DownloadUrl { get; init; }
+}
+
+/// <summary>
+/// GitHub Releases updater aligned with Compressi's AppUpdateService:
+/// ETag-aware checks, local cache, dismiss, download progress, silent install.
+/// </summary>
 public sealed class UpdateService
 {
-    private const string LatestReleaseUrl = "https://api.github.com/repos/thomasboyle/screeni/releases/latest";
-    private static readonly HttpClient Http = CreateHttpClient();
-    private static readonly Version CurrentVersion = GetCurrentVersion();
+    private const string GitHubOwner = "thomasboyle";
+    private const string GitHubRepo = "screeni";
+    // Focus-driven rechecks only (no timer required). Launch uses force:true; activation respects this interval.
+    private static readonly TimeSpan MinRecheckInterval = TimeSpan.FromHours(6);
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public async Task<AvailableUpdate?> CheckAsync(CancellationToken cancellationToken = default)
+    private readonly HttpClient _http = new()
     {
-        using var response = await Http.GetAsync(LatestReleaseUrl, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        var root = document.RootElement;
+        Timeout = TimeSpan.FromSeconds(20),
+        DefaultRequestHeaders =
+        {
+            { "User-Agent", "Screeni-Updater" },
+            { "Accept", "application/vnd.github+json" },
+        },
+    };
 
-        var tag = root.GetProperty("tag_name").GetString();
-        if (!TryParseVersion(tag, out var version) || version <= CurrentVersion)
+    private readonly object _gate = new();
+    private readonly string _cachePath;
+    private UpdateCache _cache;
+    private AppUpdateStatus _status = AppUpdateStatus.UpToDate;
+    private AppUpdateInfo? _available;
+    private double _downloadProgress;
+    private int _lastRaisedProgressPercent = -1;
+
+    public UpdateService()
+    {
+        var folder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Screeni");
+        Directory.CreateDirectory(folder);
+        _cachePath = Path.Combine(folder, "update-cache.json");
+        _cache = LoadCache(_cachePath);
+        ApplyCacheLocked();
+    }
+
+    public event EventHandler? StateChanged;
+
+    public AppUpdateStatus Status
+    {
+        get { lock (_gate) return _status; }
+    }
+
+    public AppUpdateInfo? AvailableUpdate
+    {
+        get { lock (_gate) return _available; }
+    }
+
+    public double DownloadProgress
+    {
+        get { lock (_gate) return _downloadProgress; }
+    }
+
+    public static Version GetLocalVersion()
+    {
+        var version = Assembly.GetExecutingAssembly().GetName().Version;
+        return version is null
+            ? new Version(0, 0, 0)
+            : new Version(version.Major, version.Minor, Math.Max(version.Build, 0));
+    }
+
+    public async Task CheckForUpdatesAsync(bool force = false, CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            if (_status is AppUpdateStatus.Checking or AppUpdateStatus.Downloading or AppUpdateStatus.Installing)
+            {
+                return;
+            }
+
+            if (!force
+                && _cache.LastCheckedUtc is not null
+                && DateTime.UtcNow - _cache.LastCheckedUtc.Value < MinRecheckInterval)
+            {
+                return;
+            }
+
+            _status = AppUpdateStatus.Checking;
+        }
+
+        RaiseStateChanged();
+
+        try
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/latest");
+
+            string? etag;
+            lock (_gate)
+            {
+                etag = _cache.ETag;
+            }
+
+            if (!string.IsNullOrWhiteSpace(etag))
+            {
+                request.Headers.TryAddWithoutValidation("If-None-Match", etag);
+            }
+
+            using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
+            {
+                lock (_gate)
+                {
+                    _cache.LastCheckedUtc = DateTime.UtcNow;
+                    SaveCache(_cachePath, _cache);
+                    ApplyCacheLocked();
+                }
+
+                RaiseStateChanged();
+                return;
+            }
+
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            var release = await JsonSerializer.DeserializeAsync<GitHubRelease>(stream, JsonOptions, cancellationToken)
+                .ConfigureAwait(false)
+                ?? throw new InvalidOperationException("Could not parse GitHub release response.");
+
+            var remoteVersion = ParseTagVersion(release.TagName)
+                ?? throw new InvalidOperationException($"Unrecognized release tag '{release.TagName}'.");
+
+            // Screeni ships versioned installer names: ScreeniSetup-{version}.exe
+            var expectedAssetName = $"ScreeniSetup-{remoteVersion.ToString(3)}.exe";
+            string? downloadUrl = null;
+            if (release.Assets is not null)
+            {
+                foreach (var asset in release.Assets)
+                {
+                    if (string.Equals(asset.Name, expectedAssetName, StringComparison.OrdinalIgnoreCase)
+                        && !string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl))
+                    {
+                        downloadUrl = asset.BrowserDownloadUrl;
+                        break;
+                    }
+                }
+            }
+
+            // Fallback: latest/download path if assets array is missing the expected name.
+            downloadUrl ??= $"https://github.com/{GitHubOwner}/{GitHubRepo}/releases/latest/download/{expectedAssetName}";
+
+            lock (_gate)
+            {
+                _cache = new UpdateCache
+                {
+                    ETag = response.Headers.ETag?.Tag,
+                    LastCheckedUtc = DateTime.UtcNow,
+                    LatestVersion = remoteVersion.ToString(3),
+                    DownloadUrl = downloadUrl,
+                    DismissedVersion = _cache.DismissedVersion,
+                };
+                SaveCache(_cachePath, _cache);
+                ApplyCacheLocked();
+            }
+
+            RaiseStateChanged();
+        }
+        catch (OperationCanceledException)
+        {
+            lock (_gate)
+            {
+                ApplyCacheLocked();
+            }
+
+            RaiseStateChanged();
+        }
+        catch
+        {
+            lock (_gate)
+            {
+                if (_available is not null)
+                {
+                    _status = AppUpdateStatus.Available;
+                }
+                else
+                {
+                    _status = AppUpdateStatus.Failed;
+                }
+            }
+
+            RaiseStateChanged();
+        }
+    }
+
+    public async Task DownloadAndInstallAsync(CancellationToken cancellationToken = default)
+    {
+        AppUpdateInfo update;
+        lock (_gate)
+        {
+            update = _available ?? throw new InvalidOperationException("No update is available.");
+            if (_status is AppUpdateStatus.Downloading or AppUpdateStatus.Installing)
+            {
+                return;
+            }
+
+            _status = AppUpdateStatus.Downloading;
+            _downloadProgress = 0;
+            _lastRaisedProgressPercent = -1;
+        }
+
+        RaiseStateChanged();
+
+        var tempDir = Path.Combine(Path.GetTempPath(), "ScreeniUpdate");
+        Directory.CreateDirectory(tempDir);
+        var setupPath = Path.Combine(tempDir, $"ScreeniSetup-{update.Version.ToString(3)}.exe");
+
+        try
+        {
+            // Dedicated client: API client has a short timeout and a GitHub JSON Accept header,
+            // both wrong for the installer binary.
+            using var downloadClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromMinutes(30),
+                DefaultRequestHeaders = { { "User-Agent", "Screeni-Updater" } },
+            };
+
+            using var response = await downloadClient.GetAsync(
+                update.DownloadUrl,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            var total = response.Content.Headers.ContentLength;
+            await using (var input = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+            await using (var output = new FileStream(setupPath, FileMode.Create, FileAccess.Write, FileShare.None, 82_000, true))
+            {
+                var buffer = new byte[82_000];
+                long readTotal = 0;
+                int read;
+                while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
+                {
+                    await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                    readTotal += read;
+                    if (total is not > 0)
+                    {
+                        continue;
+                    }
+
+                    var pct = (int)Math.Clamp(100.0 * readTotal / total.Value, 0, 100);
+                    bool raise;
+                    lock (_gate)
+                    {
+                        _downloadProgress = pct;
+                        raise = pct != _lastRaisedProgressPercent;
+                        if (raise)
+                        {
+                            _lastRaisedProgressPercent = pct;
+                        }
+                    }
+
+                    if (raise)
+                    {
+                        RaiseStateChanged();
+                    }
+                }
+            }
+
+            lock (_gate)
+            {
+                _status = AppUpdateStatus.Installing;
+                _downloadProgress = 100;
+            }
+
+            RaiseStateChanged();
+
+            if (System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = setupPath,
+                    // CLOSEAPPLICATIONS + Screeni's named-event shutdown in the Inno script.
+                    Arguments = "/VERYSILENT /CLOSEAPPLICATIONS /NORESTART /SUPPRESSMSGBOXES /SP-",
+                    UseShellExecute = true,
+                    WorkingDirectory = tempDir,
+                }) is null)
+            {
+                throw new InvalidOperationException("Could not start the update installer.");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            lock (_gate)
+            {
+                _status = AppUpdateStatus.Available;
+                _downloadProgress = 0;
+            }
+
+            RaiseStateChanged();
+            throw;
+        }
+        catch
+        {
+            lock (_gate)
+            {
+                _status = AppUpdateStatus.Failed;
+                _downloadProgress = 0;
+            }
+
+            RaiseStateChanged();
+            throw;
+        }
+    }
+
+    public void DismissAvailableUpdate()
+    {
+        lock (_gate)
+        {
+            if (_available is null)
+            {
+                return;
+            }
+
+            _cache.DismissedVersion = _available.Version.ToString(3);
+            SaveCache(_cachePath, _cache);
+            _available = null;
+            _status = AppUpdateStatus.UpToDate;
+        }
+
+        RaiseStateChanged();
+    }
+
+    private void ApplyCacheLocked()
+    {
+        var local = GetLocalVersion();
+        if (!Version.TryParse(_cache.LatestVersion, out var remote)
+            || string.IsNullOrWhiteSpace(_cache.DownloadUrl)
+            || remote <= local
+            || (Version.TryParse(_cache.DismissedVersion, out var dismissed) && dismissed >= remote))
+        {
+            _available = null;
+            _status = AppUpdateStatus.UpToDate;
+            return;
+        }
+
+        _available = new AppUpdateInfo
+        {
+            Version = remote,
+            DownloadUrl = _cache.DownloadUrl!,
+        };
+        _status = AppUpdateStatus.Available;
+    }
+
+    private void RaiseStateChanged() => StateChanged?.Invoke(this, EventArgs.Empty);
+
+    private static Version? ParseTagVersion(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
         {
             return null;
         }
 
-        var installerName = $"ScreeniSetup-{version}.exe";
-        foreach (var asset in root.GetProperty("assets").EnumerateArray())
+        var trimmed = tag.Trim();
+        if (trimmed.StartsWith('v') || trimmed.StartsWith('V'))
         {
-            if (!string.Equals(asset.GetProperty("name").GetString(), installerName, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var downloadUrl = asset.GetProperty("browser_download_url").GetString();
-            if (!string.IsNullOrWhiteSpace(downloadUrl))
-            {
-                return new AvailableUpdate(version, version.ToString(3), downloadUrl);
-            }
+            trimmed = trimmed[1..];
         }
 
-        return null;
+        return Version.TryParse(trimmed, out var version)
+            ? new Version(version.Major, version.Minor, Math.Max(version.Build, 0))
+            : null;
     }
 
-    public async Task<string> DownloadInstallerAsync(
-        AvailableUpdate update,
-        CancellationToken cancellationToken = default)
+    private static UpdateCache LoadCache(string path)
     {
-        var installerPath = Path.Combine(
-            Path.GetTempPath(),
-            $"ScreeniSetup-{update.VersionText}.exe");
-        var temporaryPath = installerPath + ".download";
-
         try
         {
-            using var response = await Http.GetAsync(
-                update.DownloadUrl,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-            response.EnsureSuccessStatusCode();
-            await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
-            await using var target = File.Create(temporaryPath);
-            await source.CopyToAsync(target, cancellationToken);
-            File.Move(temporaryPath, installerPath, true);
-            return installerPath;
-        }
-        finally
-        {
-            if (File.Exists(temporaryPath))
+            if (!File.Exists(path))
             {
-                File.Delete(temporaryPath);
+                return new UpdateCache();
             }
+
+            return JsonSerializer.Deserialize<UpdateCache>(File.ReadAllText(path), JsonOptions) ?? new UpdateCache();
+        }
+        catch
+        {
+            return new UpdateCache();
         }
     }
 
-    public static void StartInstaller(string installerPath)
+    private static void SaveCache(string path, UpdateCache cache)
     {
-        if (Process.Start(new ProcessStartInfo
+        try
         {
-            FileName = installerPath,
-            Arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-",
-            UseShellExecute = true,
-            WorkingDirectory = Path.GetDirectoryName(installerPath) ?? AppContext.BaseDirectory
-        }) is null)
+            File.WriteAllText(path, JsonSerializer.Serialize(cache, JsonOptions));
+        }
+        catch
         {
-            throw new InvalidOperationException("Could not start the update installer.");
+            // Best effort.
         }
     }
 
-    private static HttpClient CreateHttpClient()
+    private sealed class UpdateCache
     {
-        var client = new HttpClient();
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Screeni", CurrentAssemblyVersionText()));
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-        return client;
+        public string? ETag { get; set; }
+
+        public DateTime? LastCheckedUtc { get; set; }
+
+        public string? LatestVersion { get; set; }
+
+        public string? DownloadUrl { get; set; }
+
+        public string? DismissedVersion { get; set; }
     }
 
-    private static Version GetCurrentVersion()
+    private sealed class GitHubRelease
     {
-        var version = typeof(UpdateService).Assembly.GetName().Version;
-        return version is null ? new Version(0, 0, 0) : new Version(version.Major, version.Minor, version.Build < 0 ? 0 : version.Build);
+        [JsonPropertyName("tag_name")]
+        public string? TagName { get; set; }
+
+        [JsonPropertyName("assets")]
+        public List<GitHubAsset>? Assets { get; set; }
     }
 
-    private static string CurrentAssemblyVersionText() => GetCurrentVersion().ToString(3);
-
-    private static bool TryParseVersion(string? value, out Version version)
+    private sealed class GitHubAsset
     {
-        version = new Version();
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
 
-        var normalized = value.Trim();
-        if (normalized.StartsWith('v'))
-        {
-            normalized = normalized[1..];
-        }
-
-        if (Version.TryParse(normalized, out var parsed) && parsed is not null)
-        {
-            version = parsed;
-            return true;
-        }
-
-        return false;
+        [JsonPropertyName("browser_download_url")]
+        public string? BrowserDownloadUrl { get; set; }
     }
 }
-
-public sealed record AvailableUpdate(Version Version, string VersionText, string DownloadUrl);

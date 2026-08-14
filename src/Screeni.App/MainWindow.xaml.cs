@@ -1,6 +1,7 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
+using Screeni.Services;
 using Screeni.ViewModels;
 using Windows.Graphics;
 
@@ -8,8 +9,9 @@ namespace Screeni;
 
 public sealed partial class MainWindow : Window
 {
+    private UpdateService? _updateService;
+
     public DashboardViewModel ViewModel { get; }
-    public event Action? UpdateRequested;
 
     public MainWindow()
     {
@@ -41,39 +43,77 @@ public sealed partial class MainWindow : Window
         ChartLayout.MaximumRowsOrColumns = ViewModel.BarCount;
         SyncRangeToggles();
 
-        Activated += (_, args) =>
+        Activated += MainWindow_Activated;
+    }
+
+    public void BindUpdateService(UpdateService updates)
+    {
+        if (_updateService is not null)
         {
-            if (args.WindowActivationState != WindowActivationState.Deactivated)
-            {
-                RefreshDashboard();
-            }
-        };
+            _updateService.StateChanged -= OnUpdateStateChanged;
+        }
+
+        _updateService = updates;
+        _updateService.StateChanged += OnUpdateStateChanged;
+        RefreshUpdateBubble();
     }
 
     public void RefreshDashboard() => ViewModel.Refresh();
 
-    public void ShowUpdateNotification(string version)
+    private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
     {
-        UpdateVersionText.Text = $"Screeni {version} is ready";
-        UpdateMessageText.Text = "Click to download and install";
-        UpdateBubble.IsEnabled = true;
-        UpdateBubble.Visibility = Visibility.Visible;
+        if (args.WindowActivationState == WindowActivationState.Deactivated)
+        {
+            return;
+        }
+
+        RefreshDashboard();
+
+        // Non-forced: UpdateService enforces a multi-hour recheck interval.
+        if (_updateService is not null)
+        {
+            _ = _updateService.CheckForUpdatesAsync();
+        }
     }
 
-    public void ShowUpdateStatus(string message)
+    private void OnUpdateStateChanged(object? sender, EventArgs e)
     {
-        UpdateVersionText.Text = "Updating Screeni...";
-        UpdateMessageText.Text = message;
-        UpdateBubble.IsEnabled = false;
-        UpdateBubble.Visibility = Visibility.Visible;
+        DispatcherQueue.TryEnqueue(RefreshUpdateBubble);
     }
 
-    public void ShowUpdateError()
+    private void RefreshUpdateBubble()
     {
-        UpdateVersionText.Text = "Update failed";
-        UpdateMessageText.Text = "Try again later";
-        UpdateBubble.IsEnabled = true;
-        UpdateBubble.Visibility = Visibility.Visible;
+        if (_updateService is null)
+        {
+            UpdateBubble.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var status = _updateService.Status;
+        var update = _updateService.AvailableUpdate;
+        var show = update is not null
+            || status is AppUpdateStatus.Downloading or AppUpdateStatus.Installing or AppUpdateStatus.Failed;
+
+        UpdateBubble.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (!show)
+        {
+            return;
+        }
+
+        UpdateBubbleVersionText.Text = update is null ? string.Empty : $"v{update.Version.ToString(3)}";
+        UpdateBubbleProgress.Visibility = status is AppUpdateStatus.Downloading or AppUpdateStatus.Installing
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        UpdateBubbleProgress.Value = _updateService.DownloadProgress;
+        UpdateBubbleDismissButton.IsEnabled = status is not AppUpdateStatus.Downloading and not AppUpdateStatus.Installing;
+        UpdateBubbleActionButton.IsEnabled = status is AppUpdateStatus.Available or AppUpdateStatus.Failed;
+        UpdateBubbleActionButton.Content = status switch
+        {
+            AppUpdateStatus.Downloading => $"Downloading {_updateService.DownloadProgress:0}%",
+            AppUpdateStatus.Installing => "Installing...",
+            AppUpdateStatus.Failed => "Retry install",
+            _ => "Install update",
+        };
     }
 
     private void DayButton_Click(object sender, RoutedEventArgs e)
@@ -116,5 +156,23 @@ public sealed partial class MainWindow : Window
 
     private void ClearData_Click(object sender, RoutedEventArgs e) => ViewModel.ClearDataCommand.Execute(null);
 
-    private void UpdateBubble_Click(object sender, RoutedEventArgs e) => UpdateRequested?.Invoke();
+    private void UpdateBubbleDismissButton_Click(object sender, RoutedEventArgs e)
+    {
+        _updateService?.DismissAvailableUpdate();
+    }
+
+    private async void UpdateBubbleActionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updateService is null)
+        {
+            return;
+        }
+
+        if (_updateService.Status is AppUpdateStatus.Downloading or AppUpdateStatus.Installing)
+        {
+            return;
+        }
+
+        await App.Current.RequestUpdateInstallAsync();
+    }
 }

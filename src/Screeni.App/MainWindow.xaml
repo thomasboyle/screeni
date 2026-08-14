@@ -49,6 +49,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0"
@@ -169,6 +170,73 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
+
+                    <!-- Update bubble (Compressi-style: dismiss + progress + install) -->
+                    <Border x:Name="UpdateBubble"
+                            Grid.Row="3"
+                            Margin="19,12,19,20"
+                            Padding="12,10"
+                            Background="{StaticResource SurfaceBrush}"
+                            BorderBrush="{StaticResource BorderSoftBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Visibility="Collapsed">
+                        <Grid RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid ColumnSpacing="6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Update available"
+                                               Style="{StaticResource SectionTitleTextStyle}"
+                                               FontSize="13" />
+                                    <TextBlock x:Name="UpdateBubbleVersionText"
+                                               Style="{StaticResource MutedTextStyle}"
+                                               FontSize="12"
+                                               Text="v0.0.0" />
+                                </StackPanel>
+                                <Button x:Name="UpdateBubbleDismissButton"
+                                        Grid.Column="1"
+                                        Width="28"
+                                        Height="28"
+                                        Padding="0"
+                                        VerticalAlignment="Top"
+                                        Style="{StaticResource PixelButtonStyle}"
+                                        Click="UpdateBubbleDismissButton_Click"
+                                        ToolTipService.ToolTip="Dismiss">
+                                    <FontIcon Glyph="&#xE711;"
+                                              FontSize="10"
+                                              Foreground="{StaticResource InkMutedBrush}" />
+                                </Button>
+                            </Grid>
+
+                            <ProgressBar x:Name="UpdateBubbleProgress"
+                                         Grid.Row="1"
+                                         Height="6"
+                                         Minimum="0"
+                                         Maximum="100"
+                                         Value="0"
+                                         Foreground="{StaticResource AccentBrush}"
+                                         Background="{StaticResource AccentTintBrush}"
+                                         Visibility="Collapsed" />
+
+                            <Button x:Name="UpdateBubbleActionButton"
+                                    Grid.Row="2"
+                                    HorizontalAlignment="Stretch"
+                                    Style="{StaticResource PixelButtonStyle}"
+                                    Background="{StaticResource AccentFillBrush}"
+                                    BorderBrush="{StaticResource BorderStrongBrush}"
+                                    Click="UpdateBubbleActionButton_Click"
+                                    Content="Install update" />
+                        </Grid>
+                    </Border>
                 </Grid>
 
                 <Rectangle Width="1"
@@ -475,32 +543,6 @@
                     </Border>
                 </Grid>
             </Grid>
-
-            <Button x:Name="UpdateBubble"
-                    Grid.ColumnSpan="2"
-                    Width="330"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Bottom"
-                    Margin="26,0,0,20"
-                    Padding="16,14"
-                    Style="{StaticResource PixelButtonStyle}"
-                    HorizontalContentAlignment="Stretch"
-                    Click="UpdateBubble_Click"
-                    Visibility="Collapsed"
-                    Canvas.ZIndex="3">
-                <StackPanel Spacing="5">
-                    <TextBlock Text="Update available"
-                               Style="{StaticResource SectionTitleTextStyle}"
-                               FontSize="16" />
-                    <TextBlock x:Name="UpdateVersionText"
-                               Style="{StaticResource MutedTextStyle}"
-                               FontSize="13" />
-                    <TextBlock x:Name="UpdateMessageText"
-                               Text="Click to download and install"
-                               Style="{StaticResource BodyTextStyle}"
-                               TextWrapping="Wrap" />
-                </StackPanel>
-            </Button>
 
             <Grid x:Name="SettingsOverlay"
                   Grid.ColumnSpan="2"
