@@ -19,6 +19,7 @@ public:
     int idleThresholdSec() const;
     Theme::Id theme() const;
     void retheme();
+    void applyThemeBoxStyle();
 signals:
     void applyRequested();
     void clearDataRequested();
