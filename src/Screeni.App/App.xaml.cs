@@ -67,8 +67,8 @@ public partial class App : Application
         _tray.ShowRequested += ShowMainWindow;
         _tray.ExitRequested += OnTrayExitRequested;
 
-        // Always revalidate on launch so a release published after the last session is noticed.
-        _ = _updates.CheckForUpdatesAsync(force: true);
+        // Force check on every launch; StateChanged drives the bottom-left bubble.
+        _ = CheckUpdatesOnLaunchAsync();
 
         TrimWorkingSet();
         _memoryTrimTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
@@ -80,6 +80,18 @@ public partial class App : Application
             }
         };
         _memoryTrimTimer.Start();
+    }
+
+    private async Task CheckUpdatesOnLaunchAsync()
+    {
+        try
+        {
+            await _updates.CheckForUpdatesAsync(force: true).ConfigureAwait(true);
+        }
+        catch
+        {
+            // Bubble shows Failed state via StateChanged when applicable.
+        }
     }
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
@@ -110,7 +122,6 @@ public partial class App : Application
 
     private void OnTrayExitRequested()
     {
-        // Do not tear down the tray HWND from inside its WindowProc / popup stack.
         var queue = _window?.DispatcherQueue;
         if (queue is not null && queue.TryEnqueue(ExitApp))
         {
