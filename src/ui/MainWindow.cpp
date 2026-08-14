@@ -68,6 +68,8 @@ MainWindow::MainWindow(Tracker& tracker, QWidget* parent)
     auto* sidebar = new QFrame;
     sidebar->setObjectName(QStringLiteral("sidebar"));
     sidebar->setFixedWidth(Theme::SidebarWidth);
+    sidebar_ = sidebar;
+    applySidebarTheme();
     buildSidebar(sidebar);
     root->addWidget(sidebar);
 
@@ -207,6 +209,7 @@ void MainWindow::applySettings()
         QSettings().setValue(QStringLiteral("theme"), Theme::themeName(selected));
         qApp->setStyleSheet(Theme::globalStyleSheet());
         applyUpdateBubbleTheme();
+        applySidebarTheme();
         settings_->retheme();
         refreshAll();
         if (const QWindow* w = windowHandle()) {
@@ -330,6 +333,16 @@ void MainWindow::applyUpdateBubbleTheme()
             "QPushButton#bubbleClose:hover { color:%2; }")
                                                .arg(P.inkMuted.name(), P.ink.name()));
     }
+}
+
+void MainWindow::applySidebarTheme()
+{
+    if (!sidebar_)
+        return;
+    const auto& P = Theme::palette();
+    sidebar_->setStyleSheet(QStringLiteral(
+        "QFrame#sidebar { background-color:%1; border-right:1px solid %2; }")
+                                .arg(P.sidebarBg.name(), P.borderSoft.name()));
 }
 
 void MainWindow::onUpdateStateChanged()
