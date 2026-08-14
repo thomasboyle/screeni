@@ -1,0 +1,41 @@
+#include "core/tracker.h"
+#include "theme.h"
+#include "ui/MainWindow.h"
+
+#include <QApplication>
+#include <QFontDatabase>
+#include <QMessageBox>
+
+int main(int argc, char* argv[])
+{
+    QApplication app(argc, argv);
+    QApplication::setApplicationName(QStringLiteral("Screeni"));
+    QApplication::setOrganizationName(QStringLiteral("Screeni"));
+    QApplication::setQuitOnLastWindowClosed(false);
+
+    const int fontId = QFontDatabase::addApplicationFont(QStringLiteral(":/assets/Fonts/Monocraft.ttf"));
+    if (fontId >= 0) {
+        const auto families = QFontDatabase::applicationFontFamilies(fontId);
+        if (!families.isEmpty()) {
+            QFont f(families.at(0));
+            f.setPixelSize(14);
+            app.setFont(f);
+        }
+    }
+
+    app.setStyleSheet(Theme::globalStyleSheet());
+
+    Tracker tracker;
+    if (!tracker.start()) {
+        QMessageBox::critical(nullptr, QStringLiteral("Screeni"),
+                              QStringLiteral("Failed to start usage tracker."));
+        return 1;
+    }
+
+    MainWindow window(tracker);
+    window.show();
+
+    const int code = app.exec();
+    tracker.stop();
+    return code;
+}
