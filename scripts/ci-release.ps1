@@ -20,7 +20,9 @@ $InstallerDir = Join-Path $Root "artifacts\installer"
 $Iss = Join-Path $Root "installer\Screeni.iss"
 $Exe = Join-Path $BuildDir "Screeni.exe"
 
-"#define MyAppVersion `"$Version`"" | Set-Content (Join-Path $Root "installer\ci-version.iss") -Encoding utf8NoBOM
+[System.IO.File]::WriteAllText(
+    (Join-Path $Root "installer\ci-version.iss"),
+    "#define MyAppVersion `"$Version`"`r`n")
 
 # Qt install directory. install-qt-action exports QT_DIR (or Qt6_DIR / QT_ROOT_DIR
 # depending on version); fall back to a local dev install inside the repo.
@@ -68,9 +70,10 @@ if (-not $Iscc) {
 # in CI); the vcvars64 env is already active at this point.
 $sw.Restart()
 Write-Host "==> Configuring CMake"
-# Configure fresh so a version change (or a previous failed run) can't leave a
-# stale SCREENI_VERSION in the cache. cmake splits -D<var>=a.b.c at the first
-# dot during a reconfigure, so rebuild the cache from scratch each time.
+# Configure fresh each run: a cached compiler/toolchain from a different
+# environment (e.g. a local run under a different vcvars) would otherwise mix
+# with the active INCLUDE/LIB paths and break the build. CI has no stale cache
+# anyway (fresh workspace), so removing it costs nothing there.
 Remove-Item (Join-Path $BuildDir "CMakeCache.txt") -ErrorAction SilentlyContinue
 cmake -S $Root -B $BuildDir -G Ninja `
     -DCMAKE_BUILD_TYPE=Release `
@@ -95,12 +98,60 @@ Copy-Item $Exe $PublishDir -Force
 
 $Windeployqt = Join-Path $QtDir "bin\windeployqt.exe"
 if (-not (Test-Path $Windeployqt)) { throw "windeployqt.exe not found at $Windeployqt" }
-& $Windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw $PublishDir
+# --no-compiler-runtime: skip the ~24 MB vc_redist.x64.exe; the smaller CRT DLLs
+# the binaries actually import are copied below instead.
+& $Windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw --no-compiler-runtime $PublishDir
 if ($LASTEXITCODE -ne 0) { throw "windeployqt failed" }
+
+# Ship just the VC runtime DLLs the binaries import (~1.2 MB) instead of the
+# vc_redist.x64.exe installer (~24 MB). Qt6*.dll import msvcp140/msvcp140_1/
+# msvcp140_2/vcruntime140/vcruntime140_1; the api-ms-win-crt-* dlls are part of
+# Windows 10+. The redist subfolder is Microsoft.VC143.CRT on older toolsets and
+# Microsoft.VC145.CRT on the newest (VS 2026) ones, with identical DLL names.
+$Crts = @("msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "vcruntime140.dll", "vcruntime140_1.dll")
+$CrtDir = $null
+if ($env:VCToolsRedistDir) {
+    $CrtDir = (Get-ChildItem (Join-Path $env:VCToolsRedistDir "x64\Microsoft.VC14?.CRT") -Directory -ErrorAction SilentlyContinue | Select-Object -Last 1).FullName
+}
+if (-not $CrtDir) {
+    $CrtDir = (Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\VC\Redist\MSVC\*\x64\Microsoft.VC14?.CRT" -Directory -ErrorAction SilentlyContinue | Select-Object -Last 1).FullName
+}
+if ($CrtDir) {
+    foreach ($crt in $Crts) {
+        $src = Join-Path $CrtDir $crt
+        if (Test-Path $src) { Copy-Item $src $PublishDir -Force }
+    }
+} else {
+    Write-Warning "VCToolsRedistDir not found - VC runtime DLLs not copied to publish dir"
+}
+
+# The installed app runs without the VC redistributable, so these DLLs are
+# mandatory. Fail the release rather than ship an installer that won't start.
+$missingCrts = $Crts | Where-Object { -not (Test-Path (Join-Path $PublishDir $_)) }
+if ($missingCrts) {
+    throw "Missing VC runtime DLL(s) in publish dir: $($missingCrts -join ', ')"
+}
+
+# Prune Qt runtime files this Widgets-only app never loads. dxcompiler/dxil are
+# the D3D shader compiler used by the Qt Quick RHI; the SVG stack, touch and
+# network-information plugins are all unused (verified against the app's
+# runtime module list).
+$Prune = @(
+    "dxcompiler.dll", "dxil.dll", "Qt6Svg.dll",
+    "imageformats\qgif.dll", "imageformats\qjpeg.dll", "imageformats\qsvg.dll",
+    "iconengines", "generic", "networkinformation"
+)
+foreach ($rel in $Prune) {
+    $p = Join-Path $PublishDir $rel
+    if (Test-Path $p) { Remove-Item $p -Recurse -Force }
+}
 
 $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
 Copy-Item (Join-Path $Root "src\Screeni.App\Assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
+
+$publishSize = (Get-ChildItem $PublishDir -Recurse -File | Measure-Object Length -Sum).Sum
+Write-Host ("Publish size: {0:n1} MB" -f ($publishSize / 1MB))
 Write-Timing "staging + windeployqt" $sw
 
 # Compile installer.

@@ -41,10 +41,13 @@ jobs:
           Write-Host "Next version: $next"
 
       # Install Qt msvc2022_64 and expose the install dir via QT_DIR.
+      # Only qtbase is needed (Widgets/Network; no SVG, QML, or tools), which
+      # keeps the aqt install and the Actions cache smaller.
       - uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.3'
           arch: 'win64_msvc2022_64'
+          modules: 'qtbase'
           cache: true
           set-env: true
 
