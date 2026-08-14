@@ -29,7 +29,6 @@ public sealed class UpdateService
 {
     private const string GitHubOwner = "thomasboyle";
     private const string GitHubRepo = "screeni";
-    // Focus-driven rechecks only (no timer required). Launch uses force:true; activation respects this interval.
     private static readonly TimeSpan MinRecheckInterval = TimeSpan.FromHours(6);
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
@@ -50,6 +49,7 @@ public sealed class UpdateService
     private AppUpdateInfo? _available;
     private double _downloadProgress;
     private int _lastRaisedProgressPercent = -1;
+    private string? _lastError;
 
     public UpdateService()
     {
@@ -77,6 +77,11 @@ public sealed class UpdateService
     public double DownloadProgress
     {
         get { lock (_gate) return _downloadProgress; }
+    }
+
+    public string? LastError
+    {
+        get { lock (_gate) return _lastError; }
     }
 
     public static Version GetLocalVersion()
@@ -131,6 +136,7 @@ public sealed class UpdateService
                 lock (_gate)
                 {
                     _cache.LastCheckedUtc = DateTime.UtcNow;
+                    _lastError = null;
                     SaveCache(_cachePath, _cache);
                     ApplyCacheLocked();
                 }
@@ -148,7 +154,6 @@ public sealed class UpdateService
             var remoteVersion = ParseTagVersion(release.TagName)
                 ?? throw new InvalidOperationException($"Unrecognized release tag '{release.TagName}'.");
 
-            // Screeni ships versioned installer names: ScreeniSetup-{version}.exe
             var expectedAssetName = $"ScreeniSetup-{remoteVersion.ToString(3)}.exe";
             string? downloadUrl = null;
             if (release.Assets is not null)
@@ -164,7 +169,6 @@ public sealed class UpdateService
                 }
             }
 
-            // Fallback: latest/download path if assets array is missing the expected name.
             downloadUrl ??= $"https://github.com/{GitHubOwner}/{GitHubRepo}/releases/latest/download/{expectedAssetName}";
 
             lock (_gate)
@@ -177,6 +181,7 @@ public sealed class UpdateService
                     DownloadUrl = downloadUrl,
                     DismissedVersion = _cache.DismissedVersion,
                 };
+                _lastError = null;
                 SaveCache(_cachePath, _cache);
                 ApplyCacheLocked();
             }
@@ -192,10 +197,11 @@ public sealed class UpdateService
 
             RaiseStateChanged();
         }
-        catch
+        catch (Exception ex)
         {
             lock (_gate)
             {
+                _lastError = ex.GetType().Name + ": " + ex.Message;
                 if (_available is not null)
                 {
                     _status = AppUpdateStatus.Available;
@@ -234,8 +240,6 @@ public sealed class UpdateService
 
         try
         {
-            // Dedicated client: API client has a short timeout and a GitHub JSON Accept header,
-            // both wrong for the installer binary.
             using var downloadClient = new HttpClient
             {
                 Timeout = TimeSpan.FromMinutes(30),
@@ -294,7 +298,6 @@ public sealed class UpdateService
             if (System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = setupPath,
-                    // CLOSEAPPLICATIONS + Screeni's named-event shutdown in the Inno script.
                     Arguments = "/VERYSILENT /CLOSEAPPLICATIONS /NORESTART /SUPPRESSMSGBOXES /SP-",
                     UseShellExecute = true,
                     WorkingDirectory = tempDir,
@@ -314,12 +317,13 @@ public sealed class UpdateService
             RaiseStateChanged();
             throw;
         }
-        catch
+        catch (Exception ex)
         {
             lock (_gate)
             {
                 _status = AppUpdateStatus.Failed;
                 _downloadProgress = 0;
+                _lastError = ex.GetType().Name + ": " + ex.Message;
             }
 
             RaiseStateChanged();
@@ -411,20 +415,15 @@ public sealed class UpdateService
         }
         catch
         {
-            // Best effort.
         }
     }
 
     private sealed class UpdateCache
     {
         public string? ETag { get; set; }
-
         public DateTime? LastCheckedUtc { get; set; }
-
         public string? LatestVersion { get; set; }
-
         public string? DownloadUrl { get; set; }
-
         public string? DismissedVersion { get; set; }
     }
 
