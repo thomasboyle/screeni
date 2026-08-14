@@ -1,21 +1,30 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Screeni.Services;
 using Screeni.ViewModels;
 using Windows.Graphics;
+using Windows.UI;
 
 namespace Screeni;
 
 public sealed partial class MainWindow : Window
 {
+    private static readonly SolidColorBrush SelectedNavBrush = new(Color.FromArgb(0xFF, 0xA8, 0xAA, 0x8C));
+    private static readonly SolidColorBrush TransparentBrush = new(Color.FromArgb(0x00, 0x00, 0x00, 0x00));
+
     private UpdateService? _updateService;
+    private string _activePage = "overview";
 
     public DashboardViewModel ViewModel { get; }
+    public InsightsViewModel Insights { get; }
 
     public MainWindow()
     {
         ViewModel = new DashboardViewModel(App.Current.Usage);
+        Insights = new InsightsViewModel(App.Current.Usage);
         InitializeComponent();
 
         Title = "Screeni";
@@ -42,6 +51,7 @@ public sealed partial class MainWindow : Window
 
         ChartLayout.MaximumRowsOrColumns = ViewModel.BarCount;
         SyncRangeToggles();
+        ShowPage("overview");
 
         Activated += MainWindow_Activated;
     }
@@ -58,7 +68,14 @@ public sealed partial class MainWindow : Window
         RefreshUpdateBubble();
     }
 
-    public void RefreshDashboard() => ViewModel.Refresh();
+    public void RefreshDashboard()
+    {
+        ViewModel.Refresh();
+        if (_activePage == "insights")
+        {
+            Insights.Refresh();
+        }
+    }
 
     private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
     {
@@ -69,7 +86,6 @@ public sealed partial class MainWindow : Window
 
         RefreshDashboard();
 
-        // Non-forced: UpdateService enforces a multi-hour recheck interval.
         if (_updateService is not null)
         {
             _ = _updateService.CheckForUpdatesAsync();
@@ -116,6 +132,58 @@ public sealed partial class MainWindow : Window
         };
     }
 
+    private void OverviewNav_Click(object sender, RoutedEventArgs e) => ShowPage("overview");
+
+    private void InsightsNav_Click(object sender, RoutedEventArgs e) => ShowPage("insights");
+
+    private void ShowPage(string page)
+    {
+        _activePage = page;
+
+        OverviewPanel.Visibility = page == "overview" ? Visibility.Visible : Visibility.Collapsed;
+        InsightsPanel.Visibility = page == "insights" ? Visibility.Visible : Visibility.Collapsed;
+
+        OverviewNav.Background = page == "overview" ? SelectedNavBrush : TransparentBrush;
+        InsightsNav.Background = page == "insights" ? SelectedNavBrush : TransparentBrush;
+
+        SetNavForeground(OverviewNav, page == "overview");
+        SetNavForeground(InsightsNav, page == "insights");
+
+        if (page == "insights")
+        {
+            Insights.Refresh();
+        }
+    }
+
+    private static void SetNavForeground(Button button, bool selected)
+    {
+        if (button.Content is not StackPanel panel)
+        {
+            return;
+        }
+
+        var brush = selected
+            ? (Brush)Application.Current.Resources["NavSelectedForegroundBrush"]
+            : (Brush)Application.Current.Resources["InkMutedBrush"];
+
+        foreach (var child in panel.Children)
+        {
+            switch (child)
+            {
+                case SymbolIcon icon:
+                    icon.Foreground = selected
+                        ? (Brush)Application.Current.Resources["NavSelectedForegroundBrush"]
+                        : (Brush)Application.Current.Resources["InkMutedBrush"];
+                    break;
+                case TextBlock text:
+                    text.Foreground = selected
+                        ? (Brush)Application.Current.Resources["NavSelectedForegroundBrush"]
+                        : (Brush)Application.Current.Resources["InkBrush"];
+                    break;
+            }
+        }
+    }
+
     private void DayButton_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.SelectDayCommand.Execute(null);
@@ -154,7 +222,11 @@ public sealed partial class MainWindow : Window
         SettingsOverlay.Visibility = Visibility.Collapsed;
     }
 
-    private void ClearData_Click(object sender, RoutedEventArgs e) => ViewModel.ClearDataCommand.Execute(null);
+    private void ClearData_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ClearDataCommand.Execute(null);
+        Insights.Refresh();
+    }
 
     private void UpdateBubbleDismissButton_Click(object sender, RoutedEventArgs e)
     {
