@@ -3,6 +3,7 @@
 #include "theme.h"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -23,8 +24,8 @@ SettingsPanel::SettingsPanel(QWidget* parent) : QWidget(parent)
     card_ = new QFrame;
     card_->setObjectName(QStringLiteral("card"));
     card_->setFixedWidth(340);
-    card_->setStyleSheet(QStringLiteral(
-        "QFrame#card { background:#F7F0E2; border:1px solid #6B744F; border-radius:10px; }"));
+    card_->setStyleSheet(QStringLiteral("QFrame#card { background:%1; border:1px solid %2; border-radius:10px; }")
+                             .arg(Theme::palette().surface.name(), Theme::palette().borderStrong.name()));
     auto* lay = new QVBoxLayout(card_);
     lay->setContentsMargins(20, 18, 20, 18);
     lay->setSpacing(14);
@@ -45,6 +46,16 @@ SettingsPanel::SettingsPanel(QWidget* parent) : QWidget(parent)
     idleSpin_->setValue(60);
     lay->addWidget(idleSpin_);
 
+    auto* themeLab = new QLabel(QStringLiteral("Theme"));
+    themeLab->setObjectName(QStringLiteral("muted"));
+    lay->addWidget(themeLab);
+
+    themeBox_ = new QComboBox;
+    themeBox_->addItem(QStringLiteral("Matcha"), static_cast<int>(Theme::Id::Matcha));
+    themeBox_->addItem(QStringLiteral("Lilac"), static_cast<int>(Theme::Id::Lilac));
+    themeBox_->setCurrentIndex(static_cast<int>(Theme::Id::Matcha));
+    lay->addWidget(themeBox_);
+
     auto* apply = new QPushButton(QStringLiteral("Apply"));
     auto* clear = new QPushButton(QStringLiteral("Clear usage data"));
     auto* close = new QPushButton(QStringLiteral("Close"));
@@ -60,8 +71,16 @@ SettingsPanel::SettingsPanel(QWidget* parent) : QWidget(parent)
 
 void SettingsPanel::setStartWithWindows(bool on) { startBox_->setChecked(on); }
 void SettingsPanel::setIdleThresholdSec(int sec) { idleSpin_->setValue(sec); }
+void SettingsPanel::setTheme(Theme::Id id) { themeBox_->setCurrentIndex(static_cast<int>(id)); }
 bool SettingsPanel::startWithWindows() const { return startBox_->isChecked(); }
 int SettingsPanel::idleThresholdSec() const { return idleSpin_->value(); }
+Theme::Id SettingsPanel::theme() const { return static_cast<Theme::Id>(themeBox_->currentIndex()); }
+
+void SettingsPanel::retheme()
+{
+    card_->setStyleSheet(QStringLiteral("QFrame#card { background:%1; border:1px solid %2; border-radius:10px; }")
+                             .arg(Theme::palette().surface.name(), Theme::palette().borderStrong.name()));
+}
 
 void SettingsPanel::mousePressEvent(QMouseEvent* event)
 {

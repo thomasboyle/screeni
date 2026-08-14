@@ -239,15 +239,15 @@ void OverviewPage::refresh()
         auto* icon = new QLabel;
         icon->setFixedSize(40, 40);
         icon->setAlignment(Qt::AlignCenter);
-        icon->setStyleSheet(QStringLiteral(
-            "QLabel { background:#F7F0E2; border:1px solid #A7A28B; border-radius:8px; }"));
+        icon->setStyleSheet(QStringLiteral("QLabel { background:%1; border:1px solid %2; border-radius:8px; }")
+                                .arg(Theme::palette().surface.name(), Theme::palette().borderSoft.name()));
         const QIcon appIcon = appIconForPath(exe);
         if (!appIcon.isNull()) {
             icon->setPixmap(appIcon.pixmap(36, 36));
         } else {
             icon->setText(initial);
-            icon->setStyleSheet(QStringLiteral(
-                "QLabel { background:#F7F0E2; border:1px solid #A7A28B; border-radius:8px; font-size:16px; }"));
+            icon->setStyleSheet(QStringLiteral("QLabel { background:%1; border:1px solid %2; border-radius:8px; font-size:16px; }")
+                                    .arg(Theme::palette().surface.name(), Theme::palette().borderSoft.name()));
         }
         rowLay->addWidget(icon);
 
