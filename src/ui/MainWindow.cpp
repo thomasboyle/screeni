@@ -270,7 +270,7 @@ void MainWindow::buildUpdateBubble(QWidget* sidebar)
     auto* lay = sidebar->layout();
 
     updateBubble_ = new QFrame(sidebar);
-    updateBubble_->setObjectName(QStringLiteral("card"));
+    updateBubble_->setObjectName(QStringLiteral("updateBubble"));
     applyUpdateBubbleTheme();
     auto* bubbleLay = new QVBoxLayout(updateBubble_);
     bubbleLay->setContentsMargins(10, 8, 10, 10);
@@ -321,7 +321,7 @@ void MainWindow::applyUpdateBubbleTheme()
     if (!updateBubble_)
         return;
     updateBubble_->setStyleSheet(QStringLiteral(
-        "QFrame#card { background:%1; border:1px solid %2; border-radius:10px; }")
+        "QFrame#updateBubble { background:%1; border:1px solid %2; border-radius:10px; }")
                                     .arg(P.surface.name(), P.borderStrong.name()));
     if (updateBubbleDismiss_) {
         updateBubbleDismiss_->setStyleSheet(QStringLiteral(

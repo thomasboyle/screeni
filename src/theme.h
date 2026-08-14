@@ -26,13 +26,15 @@ struct Palette {
     QColor plantLight;
     QColor plantMid;
     QColor plantDark;
+    QColor sidebarInk;
+    QColor sidebarInkMuted;
 };
 
 inline const Palette& matchaPalette()
 {
     static const Palette p{
         {0xE8, 0xDF, 0xD0},  // pageBg
-        {0xE0, 0xD8, 0xC8},  // sidebarBg
+        {0x43, 0x4B, 0x2D},  // sidebarBg  (dark green nav bar)
         {0xF7, 0xF0, 0xE2},  // surface
         {0xFF, 0xFB, 0xF3},  // surfaceHover
         {0xE8, 0xDF, 0xD0},  // surfacePressed
@@ -49,6 +51,8 @@ inline const Palette& matchaPalette()
         {0xC2, 0xC3, 0xA2},  // plantLight
         {0x8F, 0x9A, 0x6E},  // plantMid
         {0x5F, 0x6B, 0x45},  // plantDark
+        {0xF7, 0xF0, 0xE2},  // sidebarInk  (light text on dark nav bar)
+        {0xC2, 0xC3, 0xA2},  // sidebarInkMuted
     };
     return p;
 }
@@ -74,6 +78,8 @@ inline const Palette& lilacPalette()
         {0xC2, 0xB5, 0xDE},  // plantLight
         {0x9D, 0x8C, 0xC4},  // plantMid
         {0x6E, 0x5C, 0x96},  // plantDark
+        {0x2D, 0x24, 0x40},  // sidebarInk
+        {0x5B, 0x52, 0x70},  // sidebarInkMuted
     };
     return p;
 }
@@ -117,13 +123,17 @@ inline QString globalStyleSheet()
         "}"
         "QPushButton:hover { background-color: %10; border-color: %11; }"
         "QPushButton:pressed { background-color: %12; border: 2px solid %13; }"
-        "QPushButton#nav { background: transparent; border: none; border-radius: 4px; text-align: center; padding: 0 14px; min-height: 44px; }"
-        "QPushButton#nav:hover { background-color: %14; }"
-        "QPushButton#nav[navSelected=\"true\"] { background-color: %15; border: none; border-left: 4px solid %16; border-right: 4px solid %16; border-radius: 4px; text-align: center; padding: 0 10px; min-height: 44px; }"
+        "QFrame#sidebar QPushButton#nav { color: %36; background: transparent; border: none; border-radius: 4px; text-align: center; padding: 0 14px; min-height: 44px; }"
+        "QFrame#sidebar QPushButton#nav:hover { background-color: %38; color: %40; }"
+        "QFrame#sidebar QPushButton#nav[navSelected=\"true\"] { background-color: %39; color: %40; border: none; border-left: 4px solid %41; border-right: 4px solid %41; border-radius: 4px; text-align: center; padding: 0 10px; min-height: 44px; }"
         "QPushButton#toggle { min-width: 72px; min-height: 40px; }"
         "QPushButton#toggleChecked { background-color: %17; border: 1px solid %18; min-width: 72px; min-height: 40px; }"
         "QFrame#card { background-color: %19; border: 1px solid %20; border-radius: 10px; }"
         "QFrame#sidebar { background-color: %21; border-right: 1px solid %22; }"
+        "QFrame#sidebar QLabel { color: %36; }"
+        "QFrame#sidebar QLabel#muted { color: %37; }"
+        "QFrame#sidebar QFrame#updateBubble QLabel { color: %2; }"
+        "QFrame#sidebar QFrame#updateBubble QLabel#muted { color: %5; }"
         "QProgressBar { background: transparent; border: none; border-radius: 4px; max-height: 8px; min-height: 8px; }"
         "QProgressBar::chunk { background-color: %23; border-radius: 4px; }"
         "QCheckBox { spacing: 10px; }"
@@ -156,9 +166,6 @@ inline QString globalStyleSheet()
         .arg(P.borderStrong.name())               // %11
         .arg(P.surfacePressed.name())             // %12
         .arg(P.borderStrong.name())               // %13
-        .arg(P.plantLight.name())                 // %14
-        .arg(P.accentFill.name())                 // %15
-        .arg(P.plantDark.name())                  // %16
         .arg(P.accentFill.name())                 // %17
         .arg(P.ink.name())                        // %18
         .arg(P.surface.name())                    // %19
@@ -177,6 +184,12 @@ inline QString globalStyleSheet()
         .arg(P.surface.name())                    // %32
         .arg(P.ink.name())                        // %33
         .arg(P.borderSoft.name())                 // %34
-        .arg(P.accentFill.name());                // %35
+        .arg(P.accentFill.name())                 // %35
+        .arg(P.sidebarInk.name())                 // %36
+        .arg(P.sidebarInkMuted.name())            // %37
+        .arg(P.plantLight.name())                 // %38
+        .arg(P.accentFill.name())                 // %39
+        .arg(P.ink.name())                        // %40
+        .arg(P.plantDark.name());                 // %41
 }
 }  // namespace Theme
