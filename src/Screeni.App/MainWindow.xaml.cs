@@ -52,7 +52,9 @@ public sealed partial class MainWindow : Window
         ChartLayout.MaximumRowsOrColumns = ViewModel.BarCount;
         SyncRangeToggles();
 
-        // Apply initial page state after the tree is built so both panels get a full measure.
+        OverviewNav.Click += OverviewNav_Click;
+        InsightsNav.Click += InsightsNav_Click;
+
         ShowPage("overview");
 
         Activated += MainWindow_Activated;
@@ -118,7 +120,19 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        UpdateBubbleVersionText.Text = update is null ? string.Empty : $"v{update.Version.ToString(3)}";
+        if (update is not null)
+        {
+            UpdateBubbleVersionText.Text = $"v{update.Version.ToString(3)}";
+        }
+        else if (status is AppUpdateStatus.Failed && !string.IsNullOrEmpty(_updateService.LastError))
+        {
+            UpdateBubbleVersionText.Text = _updateService.LastError!;
+        }
+        else
+        {
+            UpdateBubbleVersionText.Text = string.Empty;
+        }
+
         UpdateBubbleProgress.Visibility = status is AppUpdateStatus.Downloading or AppUpdateStatus.Installing
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -129,7 +143,7 @@ public sealed partial class MainWindow : Window
         {
             AppUpdateStatus.Downloading => $"Downloading {_updateService.DownloadProgress:0}%",
             AppUpdateStatus.Installing => "Installing...",
-            AppUpdateStatus.Failed => "Retry install",
+            AppUpdateStatus.Failed => "Retry",
             _ => "Install update",
         };
     }
@@ -138,11 +152,6 @@ public sealed partial class MainWindow : Window
 
     private void InsightsNav_Click(object sender, RoutedEventArgs e) => ShowPage("insights");
 
-    /// <summary>
-    /// Swap main pages. Both panels stay Visibility=Visible so WinUI keeps a full layout pass;
-    /// we toggle Opacity / IsHitTestVisible / ZIndex instead of Collapsed (which can leave the
-    /// newly shown sibling with zero arranged size when sharing a single Grid cell).
-    /// </summary>
     private void ShowPage(string page)
     {
         try
@@ -150,17 +159,19 @@ public sealed partial class MainWindow : Window
             _activePage = page;
             var showInsights = string.Equals(page, "insights", StringComparison.Ordinal);
 
+            OverviewRow.Height = showInsights
+                ? new GridLength(0)
+                : new GridLength(1, GridUnitType.Star);
+            InsightsRow.Height = showInsights
+                ? new GridLength(1, GridUnitType.Star)
+                : new GridLength(0);
+
             OverviewPanel.Visibility = Visibility.Visible;
             InsightsPanel.Visibility = Visibility.Visible;
-
-            OverviewPanel.Opacity = showInsights ? 0 : 1;
+            OverviewPanel.Opacity = 1;
+            InsightsPanel.Opacity = 1;
             OverviewPanel.IsHitTestVisible = !showInsights;
-
-            InsightsPanel.Opacity = showInsights ? 1 : 0;
             InsightsPanel.IsHitTestVisible = showInsights;
-
-            Canvas.SetZIndex(OverviewPanel, showInsights ? 0 : 1);
-            Canvas.SetZIndex(InsightsPanel, showInsights ? 1 : 0);
 
             OverviewNav.Background = showInsights ? TransparentBrush : SelectedNavBrush;
             InsightsNav.Background = showInsights ? SelectedNavBrush : TransparentBrush;
@@ -185,7 +196,6 @@ public sealed partial class MainWindow : Window
             }
             catch
             {
-                // ignore logging failures
             }
         }
     }
@@ -273,6 +283,12 @@ public sealed partial class MainWindow : Window
 
         if (_updateService.Status is AppUpdateStatus.Downloading or AppUpdateStatus.Installing)
         {
+            return;
+        }
+
+        if (_updateService.AvailableUpdate is null)
+        {
+            await _updateService.CheckForUpdatesAsync(force: true);
             return;
         }
 
