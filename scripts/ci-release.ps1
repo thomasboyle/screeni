@@ -22,17 +22,26 @@ $Exe = Join-Path $BuildDir "Screeni.exe"
 
 "#define MyAppVersion `"$Version`"" | Set-Content (Join-Path $Root "installer\ci-version.iss") -Encoding utf8NoBOM
 
-# Qt install directory (provided by the workflow via jurplel/install-qt-action).
+# Qt install directory. install-qt-action exports QT_DIR (or Qt6_DIR / QT_ROOT_DIR
+# depending on version); fall back to a local dev install inside the repo.
 $QtDir = $env:QT_DIR
+if (-not $QtDir) { $QtDir = $env:Qt6_DIR }
+if (-not $QtDir) { $QtDir = $env:QT_ROOT_DIR }
 if (-not $QtDir) {
-    # Fallback: probe for a locally installed Qt like the dev environment.
-    $probe = Join-Path $Root "6.8.3\msvc2022_64"
-    if (Test-Path $probe) { $QtDir = $probe }
+    foreach ($probe in @(
+        (Join-Path $Root "6.8.3\msvc2022_64"),
+        "C:\Qt\6.8.3\msvc2022_64"
+    )) {
+        if (Test-Path $probe) { $QtDir = $probe; break }
+    }
 }
 if (-not $QtDir -or -not (Test-Path $QtDir)) {
     throw "QT_DIR not set and no local Qt found. Set QT_DIR to a Qt 6 msvc2022_64 install."
 }
 Write-Host "==> Using Qt at: $QtDir"
+
+# Normalise to forward slashes: cmake treats backslashes in -D strings as escapes.
+$QtPrefix = $QtDir.Replace('\', '/')
 
 # Locate Inno Setup.
 $Iscc = @()
@@ -59,17 +68,15 @@ if (-not $Iscc) {
 # in CI); the vcvars64 env is already active at this point.
 $sw.Restart()
 Write-Host "==> Configuring CMake"
-if (-not (Test-Path (Join-Path $BuildDir "CMakeCache.txt"))) {
-    cmake -S $Root -B $BuildDir -G Ninja `
-        -DCMAKE_BUILD_TYPE=Release `
-        -DCMAKE_PREFIX_PATH=$QtDir `
-        -DSCREENI_VERSION=$Version
-    if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
-} else {
-    # Re-run to pick up a version change without a full reconfigure.
-    cmake -S $Root -B $BuildDir -DSCREENI_VERSION=$Version
-    if ($LASTEXITCODE -ne 0) { throw "CMake reconfigure failed" }
-}
+# Configure fresh so a version change (or a previous failed run) can't leave a
+# stale SCREENI_VERSION in the cache. cmake splits -D<var>=a.b.c at the first
+# dot during a reconfigure, so rebuild the cache from scratch each time.
+Remove-Item (Join-Path $BuildDir "CMakeCache.txt") -ErrorAction SilentlyContinue
+cmake -S $Root -B $BuildDir -G Ninja `
+    -DCMAKE_BUILD_TYPE=Release `
+    "-DCMAKE_PREFIX_PATH=$QtPrefix" `
+    "-DSCREENI_VERSION=$Version"
+if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 Write-Timing "cmake configure" $sw
 
 $sw.Restart()

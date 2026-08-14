@@ -22,14 +22,12 @@ if (-not $QtDir -or -not (Test-Path $QtDir)) {
 }
 
 Write-Host "==> Configuring Screeni ($Configuration) with Qt at $QtDir"
-if (-not (Test-Path (Join-Path $BuildDir "CMakeCache.txt"))) {
-    cmake -S $Root -B $BuildDir -G Ninja `
-        -DCMAKE_BUILD_TYPE=$Configuration `
-        -DCMAKE_PREFIX_PATH=$QtDir `
-        -DSCREENI_VERSION=$AppVersion
-} else {
-    cmake -S $Root -B $BuildDir -DSCREENI_VERSION=$AppVersion
-}
+$QtPrefix = $QtDir.Replace('\', '/')
+Remove-Item (Join-Path $BuildDir "CMakeCache.txt") -ErrorAction SilentlyContinue
+cmake -S $Root -B $BuildDir -G Ninja `
+    -DCMAKE_BUILD_TYPE=$Configuration `
+    -DCMAKE_PREFIX_PATH=$QtPrefix `
+    "-DSCREENI_VERSION=$AppVersion"
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 
 Write-Host "==> Building Screeni ($Configuration)"
