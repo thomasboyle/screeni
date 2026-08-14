@@ -20,13 +20,12 @@ public partial class App : Application
     private EventWaitHandle? _shutdownRequestEvent;
     private EventWaitHandle? _shutdownCompleteEvent;
     private RegisteredWaitHandle? _shutdownWait;
-    private DispatcherTimer? _updateTimer;
     private DispatcherTimer? _memoryTrimTimer;
-    private AvailableUpdate? _availableUpdate;
     private int _updateInProgress;
     private bool _exitRequested;
 
     public UsageService Usage => _usage;
+    public UpdateService Updates => _updates;
     public static new App Current => (App)Application.Current;
 
     public App()
@@ -61,16 +60,15 @@ public partial class App : Application
         var mainWindow = new MainWindow();
         _window = mainWindow;
         _window.Closed += OnWindowClosed;
-        mainWindow.UpdateRequested += OnUpdateRequested;
+        mainWindow.BindUpdateService(_updates);
         _window.Activate();
 
         _tray = new TrayIconService("Screeni");
         _tray.ShowRequested += ShowMainWindow;
         _tray.ExitRequested += OnTrayExitRequested;
-        _ = CheckForUpdatesAsync();
-        _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromHours(6) };
-        _updateTimer.Tick += (_, _) => _ = CheckForUpdatesAsync();
-        _updateTimer.Start();
+
+        // Always revalidate on launch so a release published after the last session is noticed.
+        _ = _updates.CheckForUpdatesAsync(force: true);
 
         TrimWorkingSet();
         _memoryTrimTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
@@ -160,28 +158,7 @@ public partial class App : Application
         }
     }
 
-    private async Task CheckForUpdatesAsync()
-    {
-        try
-        {
-            var update = await _updates.CheckAsync();
-            if (!_exitRequested &&
-                update is not null &&
-                (_availableUpdate is null || update.Version > _availableUpdate.Version))
-            {
-                _availableUpdate = update;
-                if (_window is MainWindow main)
-                {
-                    main.ShowUpdateNotification(update.VersionText);
-                }
-            }
-        }
-        catch
-        {
-        }
-    }
-
-    private async void OnUpdateRequested()
+    public async Task RequestUpdateInstallAsync()
     {
         if (Interlocked.Exchange(ref _updateInProgress, 1) != 0)
         {
@@ -190,32 +167,21 @@ public partial class App : Application
 
         try
         {
-            var update = _availableUpdate;
-            if (update is null)
+            if (_updates.AvailableUpdate is null
+                && _updates.Status is not AppUpdateStatus.Failed)
             {
                 return;
             }
 
-            if (_window is MainWindow main)
+            await _updates.DownloadAndInstallAsync().ConfigureAwait(true);
+            if (!_exitRequested)
             {
-                main.ShowUpdateStatus("Downloading update...");
+                ExitApp();
             }
-
-            var installerPath = await _updates.DownloadInstallerAsync(update);
-            if (_exitRequested)
-            {
-                return;
-            }
-
-            UpdateService.StartInstaller(installerPath);
-            ExitApp();
         }
         catch
         {
-            if (_window is MainWindow main)
-            {
-                main.ShowUpdateError();
-            }
+            // Status is already Failed via UpdateService; bubble UI refreshes via StateChanged.
         }
         finally
         {
@@ -240,7 +206,6 @@ public partial class App : Application
             main.ViewModel.DisposeTimer();
         }
 
-        _updateTimer?.Stop();
         _memoryTrimTimer?.Stop();
         _tray?.Dispose();
         _tray = null;
