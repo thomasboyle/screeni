@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QFontDatabase>
 #include <QMessageBox>
+#include <QSettings>
 
 int main(int argc, char* argv[])
 {
@@ -23,6 +24,9 @@ int main(int argc, char* argv[])
             app.setFont(f);
         }
     }
+
+    const QString storedTheme = QSettings().value(QStringLiteral("theme"), QStringLiteral("Matcha")).toString();
+    Theme::setTheme(storedTheme == QLatin1String("Lilac") ? Theme::Id::Lilac : Theme::Id::Matcha);
 
     app.setStyleSheet(Theme::globalStyleSheet());
 

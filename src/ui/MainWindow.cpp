@@ -12,6 +12,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QProgressBar>
+#include <QSettings>
 #include <QStackedWidget>
 #include <QStyle>
 #include <QTimer>
@@ -48,7 +49,7 @@ MainWindow::MainWindow(Tracker& tracker, QWidget* parent)
     setWindowIcon(QIcon(QStringLiteral(":/assets/Screeni.ico")));
 
     // Match the native caption/title bar colour to the page background (Windows 11 22H2+).
-    const auto bg = RGB(Theme::PageBg.red(), Theme::PageBg.green(), Theme::PageBg.blue());
+    const auto bg = RGB(Theme::palette().pageBg.red(), Theme::palette().pageBg.green(), Theme::palette().pageBg.blue());
     QTimer::singleShot(0, this, [this, bg] {
         if (const QWindow* w = windowHandle()) {
             const auto hwnd = reinterpret_cast<HWND>(w->winId());
@@ -82,6 +83,7 @@ MainWindow::MainWindow(Tracker& tracker, QWidget* parent)
     settings_->setGeometry(central->rect());
     settings_->setStartWithWindows(Autostart::isEnabled());
     settings_->setIdleThresholdSec(tracker_.idle_threshold_sec());
+    settings_->setTheme(Theme::currentId());
     settings_->hide();
 
     connect(settings_, &SettingsPanel::applyRequested, this, &MainWindow::applySettings);
@@ -198,6 +200,22 @@ void MainWindow::applySettings()
 {
     tracker_.set_idle_threshold_sec(settings_->idleThresholdSec());
     Autostart::setEnabled(settings_->startWithWindows());
+
+    const Theme::Id selected = settings_->theme();
+    if (selected != Theme::currentId()) {
+        Theme::setTheme(selected);
+        QSettings().setValue(QStringLiteral("theme"), Theme::themeName(selected));
+        qApp->setStyleSheet(Theme::globalStyleSheet());
+        applyUpdateBubbleTheme();
+        settings_->retheme();
+        refreshAll();
+        if (const QWindow* w = windowHandle()) {
+            const auto bg = RGB(Theme::palette().pageBg.red(), Theme::palette().pageBg.green(), Theme::palette().pageBg.blue());
+            const auto hwnd = reinterpret_cast<HWND>(w->winId());
+            DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, &bg, sizeof(bg));
+        }
+    }
+
     settings_->hide();
 }
 
@@ -253,8 +271,7 @@ void MainWindow::buildUpdateBubble(QWidget* sidebar)
 
     updateBubble_ = new QFrame(sidebar);
     updateBubble_->setObjectName(QStringLiteral("card"));
-    updateBubble_->setStyleSheet(QStringLiteral(
-        "QFrame#card { background:#F7F0E2; border:1px solid #6B744F; border-radius:10px; }"));
+    applyUpdateBubbleTheme();
     auto* bubbleLay = new QVBoxLayout(updateBubble_);
     bubbleLay->setContentsMargins(10, 8, 10, 10);
     bubbleLay->setSpacing(6);
@@ -271,10 +288,7 @@ void MainWindow::buildUpdateBubble(QWidget* sidebar)
     dismiss->setObjectName(QStringLiteral("bubbleClose"));
     dismiss->setFixedSize(18, 18);
     dismiss->setCursor(Qt::PointingHandCursor);
-    dismiss->setStyleSheet(QStringLiteral(
-        "QPushButton#bubbleClose { background: transparent; border: none; color:#4A4A35;"
-        " font-size: 14px; font-weight: bold; padding: 0; margin: 0; text-align: center; }"
-        "QPushButton#bubbleClose:hover { color:#2A3220; }"));
+    updateBubbleDismiss_ = dismiss;
     connect(dismiss, &QPushButton::clicked, this, &MainWindow::dismissUpdate);
     headRow->addWidget(dismiss, 0, Qt::AlignTop | Qt::AlignRight);
     bubbleLay->addLayout(headRow);
@@ -299,6 +313,23 @@ void MainWindow::buildUpdateBubble(QWidget* sidebar)
 
     updateBubble_->hide();
     lay->addWidget(updateBubble_);
+}
+
+void MainWindow::applyUpdateBubbleTheme()
+{
+    const auto& P = Theme::palette();
+    if (!updateBubble_)
+        return;
+    updateBubble_->setStyleSheet(QStringLiteral(
+        "QFrame#card { background:%1; border:1px solid %2; border-radius:10px; }")
+                                    .arg(P.surface.name(), P.borderStrong.name()));
+    if (updateBubbleDismiss_) {
+        updateBubbleDismiss_->setStyleSheet(QStringLiteral(
+            "QPushButton#bubbleClose { background: transparent; border: none; color:%1;"
+            " font-size: 14px; font-weight: bold; padding: 0; margin: 0; text-align: center; }"
+            "QPushButton#bubbleClose:hover { color:%2; }")
+                                               .arg(P.inkMuted.name(), P.ink.name()));
+    }
 }
 
 void MainWindow::onUpdateStateChanged()

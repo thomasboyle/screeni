@@ -45,7 +45,8 @@ void BarChart::paintEvent(QPaintEvent*)
     p.setPen(QPen(QColor(0, 0, 0, 0x33), 1));
     p.drawLine(0, plotTop + h / 5, plotW, plotTop + h / 5);
     p.drawLine(0, plotTop + h / 2, plotW, plotTop + h / 2);
-    p.setPen(QPen(Theme::BorderSoft, 1));
+    const auto& palette = Theme::palette();
+    p.setPen(QPen(palette.borderSoft, 1));
     p.drawLine(0, plotBottom, plotW, plotBottom);
 
     qint64 maxVal = 1;
@@ -63,11 +64,11 @@ void BarChart::paintEvent(QPaintEvent*)
         const double x = i * slot + (slot - barWidth_) * 0.5;
         const double y = plotBottom - barH;
         QRectF r(x, y, barWidth_, barH);
-        p.setPen(QPen(Theme::AccentDeep, 1));
-        p.setBrush(Theme::Accent);
+        p.setPen(QPen(palette.accentDeep, 1));
+        p.setBrush(palette.accent);
         p.drawRoundedRect(r, 3, 3);
         if (!bars_[i].label.isEmpty()) {
-            p.setPen(Theme::InkMuted);
+            p.setPen(palette.inkMuted);
             QFont f = font();
             f.setPixelSize(12);
             p.setFont(f);
@@ -76,7 +77,7 @@ void BarChart::paintEvent(QPaintEvent*)
         }
     }
 
-    p.setPen(Theme::InkMuted);
+    p.setPen(palette.inkMuted);
     QFont f = font();
     f.setPixelSize(12);
     p.setFont(f);

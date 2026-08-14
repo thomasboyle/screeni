@@ -40,6 +40,7 @@ private:
     void setNavSelected(QPushButton* selected);
     void buildUpdateBubble(QWidget* parent);
     void refreshUpdateBubble();
+    void applyUpdateBubbleTheme();
     Tracker& tracker_;
     OverviewPage* overview_ = nullptr;
     InsightsPage* insights_ = nullptr;
@@ -55,6 +56,7 @@ private:
     QLabel* updateBubbleText_ = nullptr;
     QProgressBar* updateBubbleProgress_ = nullptr;
     QPushButton* updateBubbleAction_ = nullptr;
+    QPushButton* updateBubbleDismiss_ = nullptr;
     QTimer refreshTimer_;
     bool quitting_ = false;
 };
