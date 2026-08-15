@@ -306,8 +306,8 @@ int64_t Store::upsert_app(const std::wstring& exe_path, const std::wstring& disp
 
     sqlite3_reset(stmt_upsert_app_);
     sqlite3_clear_bindings(stmt_upsert_app_);
-    sqlite3_bind_text(stmt_upsert_app_, 1, path_utf8.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt_upsert_app_, 2, name_utf8.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt_upsert_app_, 1, path_utf8.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt_upsert_app_, 2, name_utf8.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_int64(stmt_upsert_app_, 3, now);
     sqlite3_bind_int64(stmt_upsert_app_, 4, now);
 
@@ -360,14 +360,14 @@ void Store::add_usage(int64_t app_id,
             std::chrono::duration_cast<std::chrono::milliseconds>(hour_end - cursor).count();
         if (slice > 0) {
             sqlite3_reset(stmt_upsert_daily_);
-            sqlite3_bind_text(stmt_upsert_daily_, 1, day.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt_upsert_daily_, 1, day.c_str(), -1, SQLITE_STATIC);
             sqlite3_bind_int64(stmt_upsert_daily_, 2, app_id);
             sqlite3_bind_int64(stmt_upsert_daily_, 3, slice);
             sqlite3_step(stmt_upsert_daily_);
             sqlite3_reset(stmt_upsert_daily_);
 
             sqlite3_reset(stmt_upsert_hourly_);
-            sqlite3_bind_text(stmt_upsert_hourly_, 1, day.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt_upsert_hourly_, 1, day.c_str(), -1, SQLITE_STATIC);
             sqlite3_bind_int(stmt_upsert_hourly_, 2, hour);
             sqlite3_bind_int64(stmt_upsert_hourly_, 3, app_id);
             sqlite3_bind_int64(stmt_upsert_hourly_, 4, slice);
@@ -390,7 +390,7 @@ int64_t Store::today_total_ms() const {
     const std::string day = format_local_day(std::chrono::system_clock::now());
     sqlite3_reset(stmt_today_total_);
     sqlite3_clear_bindings(stmt_today_total_);
-    sqlite3_bind_text(stmt_today_total_, 1, day.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt_today_total_, 1, day.c_str(), -1, SQLITE_STATIC);
     int64_t total = 0;
     if (sqlite3_step(stmt_today_total_) == SQLITE_ROW) {
         total = sqlite3_column_int64(stmt_today_total_, 0);
@@ -412,7 +412,7 @@ std::vector<int64_t> Store::hourly_totals(const std::string& day_local) const {
 
     sqlite3_reset(stmt_hourly_totals_);
     sqlite3_clear_bindings(stmt_hourly_totals_);
-    sqlite3_bind_text(stmt_hourly_totals_, 1, day_local.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt_hourly_totals_, 1, day_local.c_str(), -1, SQLITE_STATIC);
     while (sqlite3_step(stmt_hourly_totals_) == SQLITE_ROW) {
         const int hour = sqlite3_column_int(stmt_hourly_totals_, 0);
         if (hour >= 0 && hour < 24) {
@@ -440,7 +440,7 @@ std::vector<int64_t> Store::week_day_totals(const std::string& start_day_local) 
         const std::string day = format_local_day(cursor);
         sqlite3_reset(stmt_day_total_);
         sqlite3_clear_bindings(stmt_day_total_);
-        sqlite3_bind_text(stmt_day_total_, 1, day.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt_day_total_, 1, day.c_str(), -1, SQLITE_STATIC);
         if (sqlite3_step(stmt_day_total_) == SQLITE_ROW) {
             buckets[static_cast<size_t>(i)] = sqlite3_column_int64(stmt_day_total_, 0);
         }
@@ -469,8 +469,8 @@ std::vector<AppUsageRow> Store::app_breakdown(const std::string& start_day_local
 
     sqlite3_reset(stmt_app_breakdown_);
     sqlite3_clear_bindings(stmt_app_breakdown_);
-    sqlite3_bind_text(stmt_app_breakdown_, 1, start_day_local.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt_app_breakdown_, 2, end_day_local.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt_app_breakdown_, 1, start_day_local.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt_app_breakdown_, 2, end_day_local.c_str(), -1, SQLITE_STATIC);
     while (sqlite3_step(stmt_app_breakdown_) == SQLITE_ROW) {
         AppUsageRow row;
         const auto* const path =
