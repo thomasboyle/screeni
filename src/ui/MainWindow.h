@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/tracker.h"
+#include "tracker.h"
 #include "services/UpdateService.h"
 #include "ui/InsightsPage.h"
 #include "ui/OverviewPage.h"

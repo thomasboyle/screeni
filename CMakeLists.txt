@@ -37,13 +37,8 @@ else()
   endif()
 endif()
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/store.cpp")
-  set(SCREENI_CORE_SOURCES src/core/store.cpp src/core/tracker.cpp)
-  set(SCREENI_CORE_INCLUDE src/core)
-else()
-  set(SCREENI_CORE_SOURCES src/Screeni.Core/src/store.cpp src/Screeni.Core/src/tracker.cpp)
-  set(SCREENI_CORE_INCLUDE src/Screeni.Core/src)
-endif()
+set(SCREENI_CORE_SOURCES src/Screeni.Core/src/store.cpp src/Screeni.Core/src/tracker.cpp)
+set(SCREENI_CORE_INCLUDE src/Screeni.Core/src)
 
 # Core (store + tracker + sqlite) is plain C/C++ — no Qt. Building it as a
 # static library keeps the heavy Qt precompiled headers off these translation

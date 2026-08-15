@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BarChart.h"
-#include "core/tracker.h"
+#include "tracker.h"
 
 #include <QWidget>
 
