@@ -8,6 +8,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPointer>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QTimer>
@@ -90,9 +91,13 @@ void UpdateService::checkForUpdates(bool force)
         reply->deleteLater();
     });
 
-    QTimer::singleShot(kApiTimeoutMs, this, [this, reply] {
-        if (!reply->isFinished()) {
-            reply->abort();
+    // Guard with a QPointer: the reply is deleteLater()'d when it finishes (the
+    // GitHub call normally returns in well under 20s), so the raw pointer would
+    // dangle by the time this timeout fires, crashing on reply->isFinished().
+    QPointer<QNetworkReply> replyGuard(reply);
+    QTimer::singleShot(kApiTimeoutMs, this, [this, replyGuard] {
+        if (replyGuard && !replyGuard->isFinished()) {
+            replyGuard->abort();
         }
     });
 }
