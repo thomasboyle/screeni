@@ -108,7 +108,6 @@ add_executable(Screeni WIN32
   src/services/TrayService.cpp
   src/services/Autostart.cpp
   src/services/UpdateService.cpp
-  resources/resources.qrc
 )
 
 # Embed the app icon (and other Windows resources) into the exe so the

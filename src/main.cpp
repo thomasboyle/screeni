@@ -27,7 +27,10 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    const int fontId = QFontDatabase::addApplicationFont(QStringLiteral(":/assets/Fonts/Monocraft.ttf"));
+    int fontId = QFontDatabase::addApplicationFont(
+        QCoreApplication::applicationDirPath() + QStringLiteral("/Assets/Fonts/Monocraft.ttf"));
+    if (fontId < 0)
+        fontId = QFontDatabase::addApplicationFont(QStringLiteral(":/assets/Fonts/Monocraft.ttf"));
     if (fontId >= 0) {
         const auto families = QFontDatabase::applicationFontFamilies(fontId);
         if (!families.isEmpty()) {

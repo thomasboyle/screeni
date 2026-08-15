@@ -1,6 +1,7 @@
 param(
     [string]$Configuration = "Release",
-    [switch]$SkipInstaller
+    [switch]$SkipInstaller,
+    [switch]$ForceReconfigure
 )
 
 $ErrorActionPreference = "Stop"
@@ -23,10 +24,23 @@ if (-not $QtDir -or -not (Test-Path $QtDir)) {
 
 Write-Host "==> Configuring Screeni ($Configuration) with Qt at $QtDir"
 $QtPrefix = $QtDir.Replace('\', '/')
-Remove-Item (Join-Path $BuildDir "CMakeCache.txt") -ErrorAction SilentlyContinue
+if ($ForceReconfigure) {
+    Remove-Item (Join-Path $BuildDir "CMakeCache.txt") -ErrorAction SilentlyContinue
+} else {
+    # Reuse the configure cache when the recorded compiler still exists. Dropping
+    # the cache forces a slow full reconfigure on every run; cmake regenerates it
+    # automatically when the toolchain, Qt path or SCREENI_VERSION changes.
+    $cache = Join-Path $BuildDir "CMakeCache.txt"
+    $keep = $false
+    if (Test-Path $cache) {
+        $match = Select-String -Path $cache -Pattern '^CMAKE_CXX_COMPILER:FILEPATH=(.*)$' | Select-Object -First 1
+        if ($match) { $keep = Test-Path $match.Matches[0].Groups[1].Value }
+    }
+    if (-not $keep) { Remove-Item $cache -ErrorAction SilentlyContinue }
+}
 cmake -S $Root -B $BuildDir -G Ninja `
-    -DCMAKE_BUILD_TYPE=$Configuration `
-    -DCMAKE_PREFIX_PATH=$QtPrefix `
+    "-DCMAKE_BUILD_TYPE=$Configuration" `
+    "-DCMAKE_PREFIX_PATH=$QtPrefix" `
     "-DSCREENI_VERSION=$AppVersion"
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 
@@ -41,12 +55,27 @@ Copy-Item (Join-Path $BuildDir "Screeni.exe") $PublishDir -Force
 
 $Windeployqt = Join-Path $QtDir "bin\windeployqt.exe"
 if (-not (Test-Path $Windeployqt)) { throw "windeployqt.exe not found at $Windeployqt" }
-& $Windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw $PublishDir
+& $Windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw --no-compiler-runtime $PublishDir
 if ($LASTEXITCODE -ne 0) { throw "windeployqt failed" }
+
+# Prune Qt runtime files this Widgets-only app never loads. Keeps the publish
+# dir (and thus the installer + its compile time) small.
+$Prune = @(
+    "dxcompiler.dll", "dxil.dll", "Qt6Svg.dll",
+    "imageformats\qgif.dll", "imageformats\qjpeg.dll", "imageformats\qsvg.dll",
+    "iconengines", "generic", "networkinformation"
+)
+foreach ($rel in $Prune) {
+    $p = Join-Path $PublishDir $rel
+    if (Test-Path $p) { Remove-Item $p -Recurse -Force }
+}
 
 $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
 Copy-Item (Join-Path $Root "assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
+$FontsDir = Join-Path $AssetsDir "Fonts"
+New-Item -ItemType Directory -Force -Path $FontsDir | Out-Null
+Copy-Item (Join-Path $Root "assets\Fonts\*.ttf") $FontsDir -Force
 
 if ($SkipInstaller) {
     Write-Host "Publish complete: $PublishDir"
@@ -71,5 +100,5 @@ if (-not $Setup) {
     throw "Installer output not found in $InstallerDir"
 }
 
-Write-Host ("Installer size: {0:n1} MB" -f ((Get-Item $Setup).Length / 1MB))
+Write-Host ("Installer size: {0:n1} MB" -f ($Setup.Length / 1MB))
 Write-Host "Installer ready: $($Setup.FullName)"

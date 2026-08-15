@@ -3,6 +3,7 @@
 #include "theme.h"
 #include "services/Autostart.h"
 #include "services/TrayService.h"
+#include "AppIcon.h"
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -46,7 +47,7 @@ MainWindow::MainWindow(Tracker& tracker, QWidget* parent)
 {
     setWindowTitle(QStringLiteral("Screeni"));
     resize(Theme::WindowWidth, Theme::WindowHeight);
-    setWindowIcon(QIcon(QStringLiteral(":/assets/Screeni.ico")));
+    setWindowIcon(AppIcon::load());
 
     // Match the native caption/title bar colour to the page background (Windows 11 22H2+).
     const auto bg = RGB(Theme::palette().pageBg.red(), Theme::palette().pageBg.green(), Theme::palette().pageBg.blue());

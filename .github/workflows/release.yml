@@ -57,8 +57,15 @@ jobs:
         with:
           arch: x64
 
+      # Cache compilation results across runs so the release build only
+      # recompiles files that actually changed (sccache is content-addressed, so
+      # it stays valid even when the runner's Qt/MSVC paths differ between runs).
+      - uses: mozilla-actions/sccache-action@v0.0.11
+
       - name: Build release
         shell: pwsh
+        env:
+          SCCACHE_GHA_ENABLED: "true"
         run: ./scripts/ci-release.ps1 -Version '${{ steps.version.outputs.version }}'
 
       - name: Create GitHub release

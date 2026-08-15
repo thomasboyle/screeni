@@ -1,15 +1,13 @@
 #include "TrayService.h"
 
+#include "AppIcon.h"
+
 #include <QMenu>
-#include <QIcon>
 
 TrayService::TrayService(const QString& tip, QObject* parent) : QObject(parent)
 {
     tray_ = new QSystemTrayIcon(this);
-    QIcon icon(QStringLiteral(":/assets/Screeni.ico"));
-    if (icon.isNull())
-        icon = QIcon::fromTheme(QStringLiteral("applications-system"));
-    tray_->setIcon(icon);
+    tray_->setIcon(AppIcon::load());
     tray_->setToolTip(tip);
 
     auto* menu = new QMenu;

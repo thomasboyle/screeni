@@ -70,15 +70,35 @@ if (-not $Iscc) {
 # in CI); the vcvars64 env is already active at this point.
 $sw.Restart()
 Write-Host "==> Configuring CMake"
-# Configure fresh each run: a cached compiler/toolchain from a different
-# environment (e.g. a local run under a different vcvars) would otherwise mix
-# with the active INCLUDE/LIB paths and break the build. CI has no stale cache
-# anyway (fresh workspace), so removing it costs nothing there.
-Remove-Item (Join-Path $BuildDir "CMakeCache.txt") -ErrorAction SilentlyContinue
+# Reuse the configure cache when the recorded compiler still exists. Dropping the
+# cache forces a slow full reconfigure on every run; cmake regenerates it
+# automatically when the toolchain, Qt path or SCREENI_VERSION changes. A stale
+# cache from a different vcvars environment is discarded so old INCLUDE/LIB paths
+# never mix with the active toolchain.
+$cache = Join-Path $BuildDir "CMakeCache.txt"
+$keep = $false
+if (Test-Path $cache) {
+    $match = Select-String -Path $cache -Pattern '^CMAKE_CXX_COMPILER:FILEPATH=(.*)$' | Select-Object -First 1
+    if ($match) { $keep = Test-Path $match.Matches[0].Groups[1].Value }
+}
+if (-not $keep) { Remove-Item $cache -ErrorAction SilentlyContinue }
+
+# When sccache is on PATH (CI), route compilation through it and drop the MSVC
+# precompiled header, which a caching launcher cannot reuse. Content-addressed
+# caching turns the release build into an incremental build across CI runs.
+$SccacheArgs = @()
+if (Get-Command sccache -ErrorAction SilentlyContinue) {
+    $SccacheArgs = @(
+        "-DCMAKE_C_COMPILER_LAUNCHER=sccache",
+        "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache",
+        "-DSCREENI_USE_PCH=OFF"
+    )
+}
+
 cmake -S $Root -B $BuildDir -G Ninja `
     -DCMAKE_BUILD_TYPE=Release `
     "-DCMAKE_PREFIX_PATH=$QtPrefix" `
-    "-DSCREENI_VERSION=$Version"
+    "-DSCREENI_VERSION=$Version" @SccacheArgs
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 Write-Timing "cmake configure" $sw
 
@@ -149,6 +169,9 @@ foreach ($rel in $Prune) {
 $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
 Copy-Item (Join-Path $Root "assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
+$FontsDir = Join-Path $AssetsDir "Fonts"
+New-Item -ItemType Directory -Force -Path $FontsDir | Out-Null
+Copy-Item (Join-Path $Root "assets\Fonts\*.ttf") $FontsDir -Force
 
 $publishSize = (Get-ChildItem $PublishDir -Recurse -File | Measure-Object Length -Sum).Sum
 Write-Host ("Publish size: {0:n1} MB" -f ($publishSize / 1MB))
