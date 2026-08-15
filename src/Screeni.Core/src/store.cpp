@@ -37,10 +37,11 @@ std::wstring utf8_to_wide(const std::string& value) {
         return {};
     }
     const int size = MultiByteToWideChar(CP_UTF8, 0, value.c_str(), -1, nullptr, 0);
-    std::wstring result(static_cast<size_t>(size > 0 ? size - 1 : 0), L'\0');
+    std::wstring result(static_cast<size_t>(size > 0 ? size : 0), L'\0');
     if (size > 1) {
         MultiByteToWideChar(CP_UTF8, 0, value.c_str(), -1, result.data(), size);
     }
+    result.resize(size > 0 ? static_cast<size_t>(size) - 1 : 0);
     return result;
 }
 
@@ -49,10 +50,11 @@ std::string wide_to_utf8(const std::wstring& value) {
         return {};
     }
     const int size = WideCharToMultiByte(CP_UTF8, 0, value.c_str(), -1, nullptr, 0, nullptr, nullptr);
-    std::string result(static_cast<size_t>(size > 0 ? size - 1 : 0), '\0');
+    std::string result(static_cast<size_t>(size > 0 ? size : 0), '\0');
     if (size > 1) {
         WideCharToMultiByte(CP_UTF8, 0, value.c_str(), -1, result.data(), size, nullptr, nullptr);
     }
+    result.resize(size > 0 ? static_cast<size_t>(size) - 1 : 0);
     return result;
 }
 

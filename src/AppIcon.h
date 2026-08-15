@@ -23,16 +23,13 @@ inline QIcon fallback()
 }
 
 // The app icon ships as a loose file next to the exe (Assets/Screeni.ico) so the
-// binary stays small. Falls back to the Qt resource for in-tree dev builds, then
-// to a generic system icon.
+// binary stays small. Falls back to a generic system icon, then to a painted
+// placeholder, if the file is missing.
 inline QIcon load()
 {
     const QString diskPath =
         QCoreApplication::applicationDirPath() + QStringLiteral("/Assets/Screeni.ico");
     QIcon icon(diskPath);
-    if (!icon.isNull())
-        return icon;
-    icon = QIcon(QStringLiteral(":/assets/Screeni.ico"));
     if (!icon.isNull())
         return icon;
     icon = QIcon::fromTheme(QStringLiteral("applications-system"));

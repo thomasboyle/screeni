@@ -1,4 +1,4 @@
-#include "core/tracker.h"
+#include "tracker.h"
 #include "services/UpdateService.h"
 #include "theme.h"
 #include "ui/MainWindow.h"
@@ -27,10 +27,8 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    int fontId = QFontDatabase::addApplicationFont(
+    const int fontId = QFontDatabase::addApplicationFont(
         QCoreApplication::applicationDirPath() + QStringLiteral("/Assets/Fonts/Monocraft.ttf"));
-    if (fontId < 0)
-        fontId = QFontDatabase::addApplicationFont(QStringLiteral(":/assets/Fonts/Monocraft.ttf"));
     if (fontId >= 0) {
         const auto families = QFontDatabase::applicationFontFamilies(fontId);
         if (!families.isEmpty()) {
