@@ -155,6 +155,7 @@ void MainWindow::buildSidebar(QWidget* sidebar)
     settingsNav_->setObjectName(QStringLiteral("nav"));
     for (QPushButton* btn : {overviewNav_, insightsNav_, settingsNav_}) {
         btn->setCursor(Qt::PointingHandCursor);
+        btn->setFocusPolicy(Qt::NoFocus);
         lay->addWidget(btn);
     }
 
