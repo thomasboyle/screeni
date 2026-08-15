@@ -52,6 +52,20 @@ public sealed partial class MainWindow : Window
         ChartLayout.MaximumRowsOrColumns = ViewModel.BarCount;
         SyncRangeToggles();
 
+        // Wire handlers in code-behind: XAML-declared Click/Tapped wiring can be dropped
+        // under Native AOT / XBF compilation, leaving buttons that "do nothing".
+        OverviewNav.Click += OverviewNav_Click;
+        InsightsNav.Click += InsightsNav_Click;
+        SettingsNavButton.Click += SettingsNavButton_Click;
+        DayToggle.Click += DayButton_Click;
+        WeekToggle.Click += WeekButton_Click;
+        UpdateBubbleDismissButton.Click += UpdateBubbleDismissButton_Click;
+        UpdateBubbleActionButton.Click += UpdateBubbleActionButton_Click;
+        ApplySettingsButton.Click += ApplySettings_Click;
+        ClearDataButton.Click += ClearData_Click;
+        CloseSettingsButton.Click += CloseSettings_Click;
+        SettingsOverlay.Tapped += SettingsScrim_Tapped;
+
         // Apply initial page state after the tree is built so both panels get a full measure.
         ShowPage("overview");
 
@@ -118,7 +132,11 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        UpdateBubbleVersionText.Text = update is null ? string.Empty : $"v{update.Version.ToString(3)}";
+        UpdateBubbleVersionText.Text = update is not null
+            ? $"v{update.Version.ToString(3)}"
+            : status is AppUpdateStatus.Failed && !string.IsNullOrWhiteSpace(_updateService.LastError)
+                ? _updateService.LastError!
+                : string.Empty;
         UpdateBubbleProgress.Visibility = status is AppUpdateStatus.Downloading or AppUpdateStatus.Installing
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -139,33 +157,30 @@ public sealed partial class MainWindow : Window
     private void InsightsNav_Click(object sender, RoutedEventArgs e) => ShowPage("insights");
 
     /// <summary>
-    /// Swap main pages. Both panels stay Visibility=Visible so WinUI keeps a full layout pass;
-    /// we toggle Opacity / IsHitTestVisible / ZIndex instead of Collapsed (which can leave the
-    /// newly shown sibling with zero arranged size when sharing a single Grid cell).
+    /// Swap main pages. Both panels share one Grid cell but live in separate rows; the inactive
+    /// row is given Height=0 so the hidden panel stays in the visual tree (measured) without
+    /// overlapping the active one. This avoids the WinUI bug where toggling Visibility between
+    /// two siblings in the same cell leaves the newly shown sibling with zero arranged size.
     /// </summary>
     private void ShowPage(string page)
     {
+        LogNav($"ShowPage({page})");
         try
         {
             _activePage = page;
             var showInsights = string.Equals(page, "insights", StringComparison.Ordinal);
 
-            OverviewPanel.Visibility = Visibility.Visible;
-            InsightsPanel.Visibility = Visibility.Visible;
+            OverviewRow.Height = showInsights ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+            InsightsRow.Height = showInsights ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
 
-            OverviewPanel.Opacity = showInsights ? 0 : 1;
             OverviewPanel.IsHitTestVisible = !showInsights;
-
-            InsightsPanel.Opacity = showInsights ? 1 : 0;
             InsightsPanel.IsHitTestVisible = showInsights;
-
-            Canvas.SetZIndex(OverviewPanel, showInsights ? 0 : 1);
-            Canvas.SetZIndex(InsightsPanel, showInsights ? 1 : 0);
 
             OverviewNav.Background = showInsights ? TransparentBrush : SelectedNavBrush;
             InsightsNav.Background = showInsights ? SelectedNavBrush : TransparentBrush;
             SetNavForeground(OverviewNav, !showInsights);
             SetNavForeground(InsightsNav, showInsights);
+            Title = showInsights ? "Screeni — Insights" : "Screeni — Overview";
 
             if (showInsights)
             {
@@ -174,19 +189,24 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            try
-            {
-                var path = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Screeni",
-                    "nav.log");
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.AppendAllText(path, $"{DateTime.Now:o} ShowPage({page}): {ex}\n");
-            }
-            catch
-            {
-                // ignore logging failures
-            }
+            LogNav($"ShowPage({page}): {ex}");
+        }
+    }
+
+    private static void LogNav(string message)
+    {
+        try
+        {
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Screeni",
+                "nav.log");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.AppendAllText(path, $"{DateTime.Now:o} {message}\n");
+        }
+        catch
+        {
+            // ignore logging failures
         }
     }
 
@@ -274,6 +294,16 @@ public sealed partial class MainWindow : Window
         if (_updateService.Status is AppUpdateStatus.Downloading or AppUpdateStatus.Installing)
         {
             return;
+        }
+
+        if (_updateService.AvailableUpdate is null)
+        {
+            // Failed check or nothing known yet: re-check before offering a retry.
+            await _updateService.CheckForUpdatesAsync(force: true);
+            if (_updateService.AvailableUpdate is null)
+            {
+                return;
+            }
         }
 
         await App.Current.RequestUpdateInstallAsync();

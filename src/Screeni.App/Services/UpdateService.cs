@@ -29,9 +29,7 @@ public sealed class UpdateService
 {
     private const string GitHubOwner = "thomasboyle";
     private const string GitHubRepo = "screeni";
-    // Focus-driven rechecks only (no timer required). Launch uses force:true; activation respects this interval.
     private static readonly TimeSpan MinRecheckInterval = TimeSpan.FromHours(6);
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     private readonly HttpClient _http = new()
     {
@@ -50,6 +48,7 @@ public sealed class UpdateService
     private AppUpdateInfo? _available;
     private double _downloadProgress;
     private int _lastRaisedProgressPercent = -1;
+    private string? _lastError;
 
     public UpdateService()
     {
@@ -77,6 +76,11 @@ public sealed class UpdateService
     public double DownloadProgress
     {
         get { lock (_gate) return _downloadProgress; }
+    }
+
+    public string? LastError
+    {
+        get { lock (_gate) return _lastError; }
     }
 
     public static Version GetLocalVersion()
@@ -131,6 +135,7 @@ public sealed class UpdateService
                 lock (_gate)
                 {
                     _cache.LastCheckedUtc = DateTime.UtcNow;
+                    _lastError = null;
                     SaveCache(_cachePath, _cache);
                     ApplyCacheLocked();
                 }
@@ -141,7 +146,7 @@ public sealed class UpdateService
 
             response.EnsureSuccessStatusCode();
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            var release = await JsonSerializer.DeserializeAsync<GitHubRelease>(stream, JsonOptions, cancellationToken)
+            var release = await JsonSerializer.DeserializeAsync(stream, ScreeniJsonContext.Default.GitHubRelease, cancellationToken)
                 .ConfigureAwait(false)
                 ?? throw new InvalidOperationException("Could not parse GitHub release response.");
 
@@ -177,6 +182,7 @@ public sealed class UpdateService
                     DownloadUrl = downloadUrl,
                     DismissedVersion = _cache.DismissedVersion,
                 };
+                _lastError = null;
                 SaveCache(_cachePath, _cache);
                 ApplyCacheLocked();
             }
@@ -187,15 +193,22 @@ public sealed class UpdateService
         {
             lock (_gate)
             {
-                ApplyCacheLocked();
+                if (_available is null)
+                {
+                    // HttpClient timeout is surfaced as OperationCanceledException; without this
+                    // the app silently stays UpToDate and the user never sees that checking failed.
+                    _lastError = "Update check timed out or was cancelled.";
+                    _status = AppUpdateStatus.Failed;
+                }
             }
 
             RaiseStateChanged();
         }
-        catch
+        catch (Exception ex)
         {
             lock (_gate)
             {
+                _lastError = ex.GetType().Name + ": " + ex.Message;
                 if (_available is not null)
                 {
                     _status = AppUpdateStatus.Available;
@@ -314,12 +327,13 @@ public sealed class UpdateService
             RaiseStateChanged();
             throw;
         }
-        catch
+        catch (Exception ex)
         {
             lock (_gate)
             {
                 _status = AppUpdateStatus.Failed;
                 _downloadProgress = 0;
+                _lastError = ex.GetType().Name + ": " + ex.Message;
             }
 
             RaiseStateChanged();
@@ -395,7 +409,8 @@ public sealed class UpdateService
                 return new UpdateCache();
             }
 
-            return JsonSerializer.Deserialize<UpdateCache>(File.ReadAllText(path), JsonOptions) ?? new UpdateCache();
+            return JsonSerializer.Deserialize(File.ReadAllText(path), ScreeniJsonContext.Default.UpdateCache)
+                ?? new UpdateCache();
         }
         catch
         {
@@ -407,7 +422,7 @@ public sealed class UpdateService
     {
         try
         {
-            File.WriteAllText(path, JsonSerializer.Serialize(cache, JsonOptions));
+            File.WriteAllText(path, JsonSerializer.Serialize(cache, ScreeniJsonContext.Default.UpdateCache));
         }
         catch
         {
@@ -415,7 +430,7 @@ public sealed class UpdateService
         }
     }
 
-    private sealed class UpdateCache
+    internal sealed class UpdateCache
     {
         public string? ETag { get; set; }
 
@@ -428,7 +443,7 @@ public sealed class UpdateService
         public string? DismissedVersion { get; set; }
     }
 
-    private sealed class GitHubRelease
+    internal sealed class GitHubRelease
     {
         [JsonPropertyName("tag_name")]
         public string? TagName { get; set; }
@@ -437,7 +452,7 @@ public sealed class UpdateService
         public List<GitHubAsset>? Assets { get; set; }
     }
 
-    private sealed class GitHubAsset
+    internal sealed class GitHubAsset
     {
         [JsonPropertyName("name")]
         public string? Name { get; set; }
@@ -446,3 +461,13 @@ public sealed class UpdateService
         public string? BrowserDownloadUrl { get; set; }
     }
 }
+
+/// <summary>
+/// Source-generated JSON contracts so serialization works under Native AOT / trimming,
+/// where reflection-based System.Text.Json is unavailable.
+/// </summary>
+[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+[JsonSerializable(typeof(UpdateService.UpdateCache))]
+[JsonSerializable(typeof(UpdateService.GitHubRelease))]
+[JsonSerializable(typeof(UpdateService.GitHubAsset))]
+internal sealed partial class ScreeniJsonContext : JsonSerializerContext;

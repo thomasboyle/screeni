@@ -61,7 +61,7 @@ inline const Palette& lilacPalette()
 {
     static const Palette p{
         {0xEC, 0xE6, 0xF7},  // pageBg  pastel lilac
-        {0xE2, 0xDB, 0xF0},  // sidebarBg
+        {0x40, 0x36, 0x5E},  // sidebarBg  (dark purple nav bar)
         {0xF7, 0xF3, 0xFD},  // surface
         {0xFC, 0xFA, 0xFF},  // surfaceHover
         {0xE9, 0xE1, 0xF5},  // surfacePressed
@@ -78,8 +78,8 @@ inline const Palette& lilacPalette()
         {0xC2, 0xB5, 0xDE},  // plantLight
         {0x9D, 0x8C, 0xC4},  // plantMid
         {0x6E, 0x5C, 0x96},  // plantDark
-        {0x2D, 0x24, 0x40},  // sidebarInk
-        {0x5B, 0x52, 0x70},  // sidebarInkMuted
+        {0xF7, 0xF3, 0xFD},  // sidebarInk  (light text on dark nav bar)
+        {0xC2, 0xB5, 0xDE},  // sidebarInkMuted
     };
     return p;
 }
