@@ -4,18 +4,26 @@ on:
   push:
     branches: [main, master]
 
+# Prevents multiple releases from running simultaneously if commits are pushed quickly.
+# Cancels the older runs and only keeps the latest one.
+concurrency:
+  group: release
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
 jobs:
   release:
-    runs-on: windows-latest
+    # Pin to windows-2022 to ensure MSVC 2022 compatibility with Qt 6.8.3
+    runs-on: windows-2022
     timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Compute next version
         id: version
@@ -23,28 +31,27 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
-          $tags = gh api "repos/$env:GITHUB_REPOSITORY/git/matching-refs/tags/v" --jq '.[].ref' 2>$null
-          $parsed = @()
-          foreach ($ref in $tags) {
-            $t = $ref -replace '^refs/tags/v', ''
-            if ($t -match '^(\d+\.\d+\.\d+)$') { $parsed += $Matches[1] }
-          }
-          if ($parsed.Count -gt 0) {
-            $latest = $parsed | Sort-Object { [version]$_ } | Select-Object -Last 1
+          # --paginate is required: without it, gh api returns only the first
+          # 30 refs, so the version calculation breaks once there are >30 tags.
+          $tags = gh api "repos/$env:GITHUB_REPOSITORY/git/matching-refs/tags/v" --paginate --jq '.[].ref' 2>$null
+
+          $versions = $tags | ForEach-Object { $_ -replace '^refs/tags/v', '' } | Where-Object { $_ -match '^\d+\.\d+\.\d+$' }
+
+          if ($versions) {
+            $latest = $versions | Sort-Object { [version]$_ } | Select-Object -Last 1
             $parts = $latest.Split('.')
             $next = '{0}.{1}.{2}' -f $parts[0], $parts[1], ([int]$parts[2] + 1)
           } else {
+            # Fallback to file if no tags exist
             $next = (Select-String -Path installer/ci-version.iss -Pattern '#define MyAppVersion "(.*)"').Matches[0].Groups[1].Value
           }
+
           "version=$next" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "#define MyAppVersion `"$next`"" | Set-Content installer/ci-version.iss -Encoding utf8NoBOM
           Write-Host "Next version: $next"
 
-      # Install Qt msvc2022_64 and expose the install dir via QT_DIR.
-      # Only the qtbase archive is needed (Widgets/Network + windeployqt); aqt
-      # installs ~27 base archives by default, so pinning --archives qtbase
-      # keeps the download and the Actions cache small.
-      - uses: jurplel/install-qt-action@v4
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.3'
           arch: 'win64_msvc2022_64'
@@ -52,15 +59,13 @@ jobs:
           cache: true
           set-env: true
 
-      # Expose pre-installed MSVC (~2s) instead of downloading Build Tools (~70s).
-      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
-      # Cache compilation results across runs so the release build only
-      # recompiles files that actually changed (sccache is content-addressed, so
-      # it stays valid even when the runner's Qt/MSVC paths differ between runs).
-      - uses: mozilla-actions/sccache-action@v0.0.11
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - name: Build release
         shell: pwsh
@@ -76,6 +81,10 @@ jobs:
           $version = '${{ steps.version.outputs.version }}'
           $tag = "v$version"
           $installer = "artifacts/installer/ScreeniSetup-$version.exe"
+
           if (-not (Test-Path $installer)) { throw "Missing $installer" }
-          Write-Host "Artifact OK: $installer ($([math]::Round((Get-Item $installer).Length/1MB,1)) MB)"
+
+          $size = [math]::Round((Get-Item $installer).Length/1MB,1)
+          Write-Host "Artifact OK: $installer ($size MB)"
+
           gh release create $tag $installer --title "Screeni $tag" --generate-notes
