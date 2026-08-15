@@ -58,6 +58,32 @@ if (-not (Test-Path $Windeployqt)) { throw "windeployqt.exe not found at $Windep
 & $Windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw --no-compiler-runtime $PublishDir
 if ($LASTEXITCODE -ne 0) { throw "windeployqt failed" }
 
+# Ship just the VC runtime DLLs the binaries import (~1.2 MB) instead of the
+# vc_redist.x64.exe installer (~24 MB) that --no-compiler-runtime skips. Without
+# these the installed app won't start on machines lacking the VC redistributable.
+$Crts = @("msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "vcruntime140.dll", "vcruntime140_1.dll")
+$CrtDir = $null
+if ($env:VCToolsRedistDir) {
+    $CrtDir = (Get-ChildItem (Join-Path $env:VCToolsRedistDir "x64\Microsoft.VC14?.CRT") -Directory -ErrorAction SilentlyContinue | Select-Object -Last 1).FullName
+}
+if (-not $CrtDir) {
+    $CrtDir = (Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\VC\Redist\MSVC\*\x64\Microsoft.VC14?.CRT" -Directory -ErrorAction SilentlyContinue | Select-Object -Last 1).FullName
+}
+if ($CrtDir) {
+    foreach ($crt in $Crts) {
+        $src = Join-Path $CrtDir $crt
+        if (Test-Path $src) { Copy-Item $src $PublishDir -Force }
+    }
+} else {
+    Write-Warning "VCToolsRedistDir not found - VC runtime DLLs not copied to publish dir"
+}
+
+# Fail rather than ship an installer that won't start.
+$missingCrts = $Crts | Where-Object { -not (Test-Path (Join-Path $PublishDir $_)) }
+if ($missingCrts) {
+    throw "Missing VC runtime DLL(s) in publish dir: $($missingCrts -join ', ')"
+}
+
 # Prune Qt runtime files this Widgets-only app never loads. Keeps the publish
 # dir (and thus the installer + its compile time) small.
 $Prune = @(
