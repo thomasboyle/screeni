@@ -314,6 +314,11 @@ void MainWindow::buildUpdateBubble(QWidget* sidebar)
     connect(updateBubbleAction_, &QPushButton::clicked, this, &MainWindow::installUpdate);
     bubbleLay->addWidget(updateBubbleAction_);
 
+    // The earlier applyUpdateBubbleTheme() call ran before the dismiss button existed,
+    // so re-apply now that every child is created. Without this, the dismiss falls back
+    // to the global QPushButton min-height (28px) and renders taller than it is wide.
+    applyUpdateBubbleTheme();
+
     updateBubble_->hide();
     lay->addWidget(updateBubble_);
 }

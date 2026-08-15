@@ -3,7 +3,7 @@
 
 param(
     [Parameter(Mandatory = $true)][string]$OutPath,
-    [string]$ProcessName = "Screeni.App",
+    [string]$ProcessName = "Screeni",
     # WinUI 3 composition surfaces often come back blank from PrintWindow, so screen is the default.
     [ValidateSet("screen", "printwindow")][string]$Mode = "screen"
 )

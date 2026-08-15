@@ -148,7 +148,7 @@ foreach ($rel in $Prune) {
 
 $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
-Copy-Item (Join-Path $Root "src\Screeni.App\Assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
+Copy-Item (Join-Path $Root "assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
 
 $publishSize = (Get-ChildItem $PublishDir -Recurse -File | Measure-Object Length -Sum).Sum
 Write-Host ("Publish size: {0:n1} MB" -f ($publishSize / 1MB))

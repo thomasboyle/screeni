@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Screeni.App": {
-      "commandName": "Project",
-      "nativeDebugging": true
-    }
-  }
-}

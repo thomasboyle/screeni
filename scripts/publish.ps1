@@ -46,7 +46,7 @@ if ($LASTEXITCODE -ne 0) { throw "windeployqt failed" }
 
 $AssetsDir = Join-Path $PublishDir "Assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
-Copy-Item (Join-Path $Root "src\Screeni.App\Assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
+Copy-Item (Join-Path $Root "assets\Screeni.ico") (Join-Path $AssetsDir "Screeni.ico") -Force
 
 if ($SkipInstaller) {
     Write-Host "Publish complete: $PublishDir"
