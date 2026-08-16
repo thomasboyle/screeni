@@ -36,6 +36,12 @@ public:
     int64_t today_total_ms() const;
     std::vector<int64_t> hourly_totals(const std::string& day_local) const;
     std::vector<int64_t> week_day_totals(const std::string& start_day_local) const;
+    // One query per day range: per-day totals aligned to start_day (zero-filled).
+    std::vector<int64_t> day_totals(const std::string& start_day_local,
+                                    const std::string& end_day_local) const;
+    // One query for a day range: per-day 24-hour buckets aligned to start_day.
+    std::vector<std::vector<int64_t>> hourly_totals_range(const std::string& start_day_local,
+                                                          const std::string& end_day_local) const;
     std::vector<AppUsageRow> app_breakdown(const std::string& start_day_local,
                                            const std::string& end_day_local) const;
     bool clear_all();
@@ -50,7 +56,8 @@ private:
     sqlite3_stmt* stmt_upsert_hourly_ = nullptr;
     sqlite3_stmt* stmt_today_total_ = nullptr;
     sqlite3_stmt* stmt_hourly_totals_ = nullptr;
-    sqlite3_stmt* stmt_day_total_ = nullptr;
+    sqlite3_stmt* stmt_day_totals_ = nullptr;
+    sqlite3_stmt* stmt_hourly_totals_range_ = nullptr;
     sqlite3_stmt* stmt_app_breakdown_ = nullptr;
 
     bool exec(const char* sql) const;

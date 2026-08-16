@@ -42,8 +42,7 @@ QVersionNumber parseTagVersion(const QString& tag)
 
 UpdateService::UpdateService(QObject* parent)
     : QObject(parent)
-    , checkManager_(new QNetworkAccessManager(this))
-    , downloadManager_(new QNetworkAccessManager(this))
+    , manager_(new QNetworkAccessManager(this))
 {
     QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
     loadCache();
@@ -85,7 +84,7 @@ void UpdateService::checkForUpdates(bool force)
     if (!cache_.etag.isEmpty())
         req.setRawHeader("If-None-Match", cache_.etag.toUtf8());
 
-    QNetworkReply* reply = checkManager_->get(req);
+    QNetworkReply* reply = manager_->get(req);
     connect(reply, &QNetworkReply::finished, this, [this, reply] {
         onCheckFinished(reply);
         reply->deleteLater();
@@ -201,7 +200,7 @@ void UpdateService::downloadAndInstall()
     QUrl downloadUrl(downloadUrl_);
     QNetworkRequest req(downloadUrl);
     req.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Screeni-Updater"));
-    downloadReply_ = downloadManager_->get(req);
+    downloadReply_ = manager_->get(req);
 
     downloadFile_ = new QFile(tempSetupPath_, this);
     if (!downloadFile_->open(QIODevice::WriteOnly | QIODevice::Truncate)) {

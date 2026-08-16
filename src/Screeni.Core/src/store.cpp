@@ -5,10 +5,11 @@
 #include <Windows.h>
 
 #include <cctype>
+#include <cstdio>
 #include <filesystem>
-#include <iomanip>
 #include <optional>
 #include <sstream>
+#include <unordered_map>
 
 namespace {
 
@@ -16,9 +17,10 @@ std::string format_local_day(const std::chrono::system_clock::time_point& tp) {
     const auto time = std::chrono::system_clock::to_time_t(tp);
     std::tm local{};
     localtime_s(&local, &time);
-    std::ostringstream oss;
-    oss << std::put_time(&local, "%Y-%m-%d");
-    return oss.str();
+    char buf[16];
+    std::snprintf(buf, sizeof(buf), "%04d-%02d-%02d", local.tm_year + 1900, local.tm_mon + 1,
+                  local.tm_mday);
+    return std::string(buf);
 }
 
 int local_hour(const std::chrono::system_clock::time_point& tp) {
@@ -148,6 +150,36 @@ std::optional<std::chrono::system_clock::time_point> next_local_hour_end(
     return hour_end;
 }
 
+// Consecutive civil-day strings from start_day_local to end_day_local (inclusive).
+std::vector<std::string> day_list(const std::string& start_day_local,
+                                  const std::string& end_day_local,
+                                  const std::optional<std::chrono::system_clock::time_point>& start,
+                                  const std::optional<std::chrono::system_clock::time_point>& end) {
+    std::vector<std::string> days;
+    if (!start || !end || *end < *start) {
+        return days;
+    }
+    days.push_back(start_day_local);
+    for (auto cursor = *start; cursor < *end;) {
+        const auto next = add_local_days(cursor, 1);
+        if (!next) {
+            return {};
+        }
+        days.push_back(format_local_day(*next));
+        cursor = *next;
+    }
+    return days;
+}
+
+std::unordered_map<std::string, size_t> day_index(const std::vector<std::string>& days) {
+    std::unordered_map<std::string, size_t> index;
+    index.reserve(days.size());
+    for (size_t i = 0; i < days.size(); ++i) {
+        index.emplace(days[i], i);
+    }
+    return index;
+}
+
 }  // namespace
 
 bool Store::is_valid_local_day(const std::string& day_yyyy_mm_dd) {
@@ -207,7 +239,8 @@ void Store::finalize_statements() {
     fin(stmt_upsert_hourly_);
     fin(stmt_today_total_);
     fin(stmt_hourly_totals_);
-    fin(stmt_day_total_);
+    fin(stmt_day_totals_);
+    fin(stmt_hourly_totals_range_);
     fin(stmt_app_breakdown_);
 }
 
@@ -236,8 +269,12 @@ bool Store::prepare_statements() {
            prep(stmt_hourly_totals_,
                 "SELECT hour, COALESCE(SUM(duration_ms), 0) FROM hourly_totals WHERE day = ? "
                 "GROUP BY hour;") &&
-           prep(stmt_day_total_,
-                "SELECT COALESCE(SUM(duration_ms), 0) FROM daily_totals WHERE day = ?;") &&
+           prep(stmt_day_totals_,
+                "SELECT day, COALESCE(SUM(duration_ms), 0) FROM daily_totals "
+                "WHERE day BETWEEN ? AND ? GROUP BY day;") &&
+           prep(stmt_hourly_totals_range_,
+                "SELECT day, hour, COALESCE(SUM(duration_ms), 0) FROM hourly_totals "
+                "WHERE day BETWEEN ? AND ? GROUP BY day, hour;") &&
            prep(stmt_app_breakdown_,
                 "SELECT a.exe_path, a.display_name, COALESCE(SUM(d.duration_ms), 0) AS total "
                 "FROM daily_totals d "
@@ -424,35 +461,92 @@ std::vector<int64_t> Store::hourly_totals(const std::string& day_local) const {
 }
 
 std::vector<int64_t> Store::week_day_totals(const std::string& start_day_local) const {
-    std::vector<int64_t> buckets(7, 0);
     const auto day_start = parse_local_day_start(start_day_local);
     if (!day_start) {
-        return buckets;
+        return std::vector<int64_t>(7, 0);
+    }
+    const auto end = add_local_days(*day_start, 6);
+    if (!end) {
+        return std::vector<int64_t>(7, 0);
+    }
+    auto totals = day_totals(start_day_local, format_local_day(*end));
+    totals.resize(7, 0);
+    return totals;
+}
+
+std::vector<int64_t> Store::day_totals(const std::string& start_day_local,
+                                       const std::string& end_day_local) const {
+    const auto start = parse_local_day_start(start_day_local);
+    const auto end = parse_local_day_start(end_day_local);
+    const auto days = day_list(start_day_local, end_day_local, start, end);
+    std::vector<int64_t> out(days.size(), 0);
+    if (days.empty()) {
+        return out;
     }
 
     std::lock_guard lock(mutex_);
-    if (!db_ || !stmt_day_total_) {
-        return buckets;
+    if (!db_ || !stmt_day_totals_) {
+        return out;
     }
 
-    auto cursor = *day_start;
-    for (int i = 0; i < 7; ++i) {
-        const std::string day = format_local_day(cursor);
-        sqlite3_reset(stmt_day_total_);
-        sqlite3_clear_bindings(stmt_day_total_);
-        sqlite3_bind_text(stmt_day_total_, 1, day.c_str(), -1, SQLITE_STATIC);
-        if (sqlite3_step(stmt_day_total_) == SQLITE_ROW) {
-            buckets[static_cast<size_t>(i)] = sqlite3_column_int64(stmt_day_total_, 0);
+    sqlite3_reset(stmt_day_totals_);
+    sqlite3_clear_bindings(stmt_day_totals_);
+    sqlite3_bind_text(stmt_day_totals_, 1, start_day_local.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt_day_totals_, 2, end_day_local.c_str(), -1, SQLITE_STATIC);
+    const auto index = day_index(days);
+    while (sqlite3_step(stmt_day_totals_) == SQLITE_ROW) {
+        const auto* const day =
+            reinterpret_cast<const char*>(sqlite3_column_text(stmt_day_totals_, 0));
+        if (!day) {
+            continue;
         }
-        sqlite3_reset(stmt_day_total_);
-
-        const auto next = add_local_days(cursor, 1);
-        if (!next) {
-            break;
+        const auto it = index.find(day);
+        if (it != index.end()) {
+            out[it->second] = sqlite3_column_int64(stmt_day_totals_, 1);
         }
-        cursor = *next;
     }
-    return buckets;
+    sqlite3_reset(stmt_day_totals_);
+    return out;
+}
+
+std::vector<std::vector<int64_t>> Store::hourly_totals_range(const std::string& start_day_local,
+                                                             const std::string& end_day_local) const {
+    const auto start = parse_local_day_start(start_day_local);
+    const auto end = parse_local_day_start(end_day_local);
+    const auto days = day_list(start_day_local, end_day_local, start, end);
+    std::vector<std::vector<int64_t>> out(days.size(), std::vector<int64_t>(24, 0));
+    if (days.empty()) {
+        return out;
+    }
+
+    std::lock_guard lock(mutex_);
+    if (!db_ || !stmt_hourly_totals_range_) {
+        return out;
+    }
+
+    sqlite3_reset(stmt_hourly_totals_range_);
+    sqlite3_clear_bindings(stmt_hourly_totals_range_);
+    sqlite3_bind_text(stmt_hourly_totals_range_, 1, start_day_local.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt_hourly_totals_range_, 2, end_day_local.c_str(), -1, SQLITE_STATIC);
+    const auto index = day_index(days);
+    while (sqlite3_step(stmt_hourly_totals_range_) == SQLITE_ROW) {
+        const auto* const day =
+            reinterpret_cast<const char*>(sqlite3_column_text(stmt_hourly_totals_range_, 0));
+        if (!day) {
+            continue;
+        }
+        const int hour = sqlite3_column_int(stmt_hourly_totals_range_, 1);
+        if (hour < 0 || hour >= 24) {
+            continue;
+        }
+        const auto it = index.find(day);
+        if (it != index.end()) {
+            out[it->second][static_cast<size_t>(hour)] =
+                sqlite3_column_int64(stmt_hourly_totals_range_, 2);
+        }
+    }
+    sqlite3_reset(stmt_hourly_totals_range_);
+    return out;
 }
 
 std::vector<AppUsageRow> Store::app_breakdown(const std::string& start_day_local,

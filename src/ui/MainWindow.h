@@ -61,4 +61,5 @@ private:
     QWidget* sidebar_ = nullptr;
     QTimer refreshTimer_;
     bool quitting_ = false;
+    QString trayTip_;
 };

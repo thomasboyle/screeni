@@ -140,5 +140,18 @@ if(SCREENI_USE_PCH)
   target_precompile_headers(Screeni PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h)
 endif()
 
+# Headless characterization + benchmark for ScreeniCore (no Qt). Built by default
+# for local measurement; never installed and not part of the release package.
+option(SCREENI_BUILD_BENCH "Build the ScreeniCore benchmark exe" ON)
+if(SCREENI_BUILD_BENCH)
+  add_executable(ScreeniBench bench/ScreeniBench.cpp)
+  target_include_directories(ScreeniBench PRIVATE src/Screeni.Core/third_party/sqlite)
+  target_link_libraries(ScreeniBench PRIVATE ScreeniCore)
+  if(WIN32)
+    target_compile_definitions(ScreeniBench PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_link_libraries(ScreeniBench PRIVATE user32 shell32 ole32 version advapi32)
+  endif()
+endif()
+
 install(TARGETS Screeni RUNTIME DESTINATION bin)
 message(STATUS "Screeni ${PROJECT_VERSION} — Qt ${Qt6_VERSION}")

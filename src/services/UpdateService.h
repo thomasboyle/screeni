@@ -59,8 +59,7 @@ private:
     void onDownloadFinished(QNetworkReply* reply);
     void startInstaller(const QString& setupPath);
 
-    QNetworkAccessManager* checkManager_ = nullptr;
-    QNetworkAccessManager* downloadManager_ = nullptr;
+    QNetworkAccessManager* manager_ = nullptr;
     QNetworkReply* downloadReply_ = nullptr;
     QIODevice* downloadFile_ = nullptr;
     QString tempDir_;

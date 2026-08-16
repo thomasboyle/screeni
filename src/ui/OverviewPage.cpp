@@ -1,6 +1,7 @@
 #include "ui/OverviewPage.h"
 
 #include "theme.h"
+#include "format.h"
 
 #include <QDate>
 #include <QFrame>
@@ -22,11 +23,6 @@
 #include <filesystem>
 
 namespace {
-
-QString localDayString(const QDate& date)
-{
-    return date.toString(QStringLiteral("yyyy-MM-dd"));
-}
 
 // Apps that self-update (e.g. Discord, Spotify) move to a fresh per-version folder over
 // time, leaving the stored path stale. Match the executable's base name against running
@@ -70,6 +66,13 @@ QIcon appIconForPath(const QString& exePath)
     if (exePath.isEmpty())
         return {};
 
+    // App icons are immutable for a given path and the list refreshes every 15s:
+    // resolve each path exactly once instead of re-hitting the shell each time.
+    static QHash<QString, QIcon> cache;
+    const auto cached = cache.constFind(exePath);
+    if (cached != cache.cend())
+        return cached.value();
+
     const std::wstring stored = exePath.toStdWString();
     std::wstring path = stored;
     if (!std::filesystem::exists(path)) {
@@ -86,6 +89,7 @@ QIcon appIconForPath(const QString& exePath)
         return {};
     QIcon icon(QPixmap::fromImage(QImage::fromHICON(info.hIcon)));
     DestroyIcon(info.hIcon);
+    cache.insert(exePath, icon);
     return icon;
 }
 
@@ -95,20 +99,6 @@ QString monthDayLabel(const QDate& date)
 }
 
 }  // namespace
-
-QString OverviewPage::formatDuration(qint64 ms)
-{
-    if (ms < 0)
-        ms = 0;
-    const qint64 totalMin = ms / 60000;
-    if (totalMin >= 60)
-        return QStringLiteral("%1h %2m").arg(totalMin / 60).arg(totalMin % 60);
-    if (totalMin >= 1)
-        return QStringLiteral("%1m").arg(totalMin);
-    if (ms == 0)
-        return QStringLiteral("0m");
-    return QStringLiteral("%1s").arg(qMax<qint64>(1, ms / 1000));
-}
 
 OverviewPage::OverviewPage(Tracker& tracker, QWidget* parent)
     : QWidget(parent)
@@ -165,8 +155,6 @@ OverviewPage::OverviewPage(Tracker& tracker, QWidget* parent)
     appsLay->addWidget(appsList_);
     lay->addWidget(appsCard, 1);
 
-    connect(dayBtn_, &QPushButton::clicked, this, &OverviewPage::dayRangeSelected);
-    connect(weekBtn_, &QPushButton::clicked, this, &OverviewPage::weekRangeSelected);
     connect(dayBtn_, &QPushButton::clicked, this, [this] { setRange(Range::Day); });
     connect(weekBtn_, &QPushButton::clicked, this, [this] { setRange(Range::Week); });
 

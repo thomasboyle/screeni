@@ -15,7 +15,6 @@ public:
 public slots:
     void refresh();
 private:
-    static QString formatDuration(qint64 ms);
     static QString formatPercent(double share);
     static QString formatHour(int hour);
     Tracker& tracker_;

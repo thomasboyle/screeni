@@ -15,13 +15,9 @@ public:
     explicit OverviewPage(Tracker& tracker, QWidget* parent = nullptr);
 public slots:
     void refresh();
-signals:
-    void dayRangeSelected();
-    void weekRangeSelected();
 private:
     enum class Range { Day, Week };
     void setRange(Range r);
-    static QString formatDuration(qint64 ms);
     Tracker& tracker_;
     Range range_ = Range::Day;
     QLabel* rangeLabel_ = nullptr;

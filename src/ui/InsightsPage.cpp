@@ -1,6 +1,7 @@
 #include "ui/InsightsPage.h"
 
 #include "theme.h"
+#include "format.h"
 
 #include <QDate>
 #include <QFrame>
@@ -10,28 +11,8 @@
 #include <QScrollArea>
 #include <QVBoxLayout>
 
-namespace {
-
-QString localDayString(const QDate& date)
-{
-    return date.toString(QStringLiteral("yyyy-MM-dd"));
-}
-
-}  // namespace
-
-QString InsightsPage::formatDuration(qint64 ms)
-{
-    if (ms < 0)
-        ms = 0;
-    const qint64 totalMin = ms / 60000;
-    if (totalMin >= 60)
-        return QStringLiteral("%1h %2m").arg(totalMin / 60).arg(totalMin % 60);
-    if (totalMin >= 1)
-        return QStringLiteral("%1m").arg(totalMin);
-    if (ms == 0)
-        return QStringLiteral("0m");
-    return QStringLiteral("%1s").arg(qMax<qint64>(1, ms / 1000));
-}
+#include <array>
+#include <cmath>
 
 QString InsightsPage::formatPercent(double share)
 {
@@ -242,11 +223,34 @@ void InsightsPage::refresh()
     const QDate today = QDate::currentDate();
     const int weekIndex = (today.dayOfWeek() + 6) % 7;  // Mon=0 … Sun=6
     const QDate thisMonday = today.addDays(-weekIndex);
-    const QDate lastMonday = thisMonday.addDays(-7);
     const int daysElapsed = weekIndex + 1;
 
-    const auto thisWeek = tracker_.store().week_day_totals(localDayString(thisMonday).toStdString());
-    const auto lastWeek = tracker_.store().week_day_totals(localDayString(lastMonday).toStdString());
+    // Daily totals drive the week comparison and the 14-day trend; hourly data
+    // is only needed for the current week (dayparts + peak hour).
+    const auto days = tracker_.store().day_totals(
+        localDayString(today.addDays(-13)).toStdString(), localDayString(today).toStdString());
+    const auto hours = tracker_.store().hourly_totals_range(
+        localDayString(thisMonday).toStdString(), localDayString(today).toStdString());
+
+    std::array<qint64, 14> dayTotals{};
+    for (size_t d = 0; d < days.size() && d < 14; ++d)
+        dayTotals[d] = days[d];
+
+    std::array<std::array<qint64, 24>, 7> h{};
+    for (size_t d = 0; d < hours.size() && d < 7; ++d)
+        for (int hh = 0; hh < 24; ++hh)
+            h[d][hh] = hours[d][static_cast<size_t>(hh)];
+
+    auto dayTotal = [&](int idx) -> qint64 {
+        return (idx >= 0 && idx < 14) ? dayTotals[idx] : 0;
+    };
+
+    std::array<qint64, 7> thisWeek{};
+    std::array<qint64, 7> lastWeek{};
+    for (int i = 0; i < 7; ++i) {
+        thisWeek[i] = dayTotal(13 - weekIndex + i);
+        lastWeek[i] = dayTotal(6 - weekIndex + i);
+    }
 
     qint64 thisWeekToDate = 0;
     qint64 lastWeekToDate = 0;
@@ -295,34 +299,29 @@ void InsightsPage::refresh()
                                                          formatDuration(thisWeek[quietestIdx])));
     }
 
-    const auto todayHourly = tracker_.store().hourly_totals(localDayString(today).toStdString());
     int peakHour = 0;
-    for (int h = 1; h < 24; ++h) {
-        if (todayHourly[h] > todayHourly[peakHour])
-            peakHour = h;
+    for (int hh = 1; hh < 24; ++hh) {
+        if (h[weekIndex][hh] > h[weekIndex][peakHour])
+            peakHour = hh;
     }
 
-    if (todayHourly[peakHour] <= 0) {
+    if (h[weekIndex][peakHour] <= 0) {
         peakHour_->setText(QStringLiteral("—"));
         peakDetail_->setText(QStringLiteral("No usage recorded today"));
     } else {
         peakHour_->setText(formatHour(peakHour));
-        peakDetail_->setText(QStringLiteral("%1 in that hour").arg(formatDuration(todayHourly[peakHour])));
+        peakDetail_->setText(QStringLiteral("%1 in that hour").arg(formatDuration(h[weekIndex][peakHour])));
     }
 
     qint64 morning = 0, afternoon = 0, evening = 0, night = 0;
     for (int d = 0; d < daysElapsed; ++d) {
-        const QDate day = thisMonday.addDays(d);
-        const auto hourly = d == weekIndex
-            ? todayHourly
-            : tracker_.store().hourly_totals(localDayString(day).toStdString());
-        for (int h = 0; h < 24; ++h) {
-            const qint64 ms = hourly[h];
-            if (h >= 5 && h < 12)
+        for (int hh = 0; hh < 24; ++hh) {
+            const qint64 ms = h[d][hh];
+            if (hh >= 5 && hh < 12)
                 morning += ms;
-            else if (h >= 12 && h < 17)
+            else if (hh >= 12 && hh < 17)
                 afternoon += ms;
-            else if (h >= 17 && h < 22)
+            else if (hh >= 17 && hh < 22)
                 evening += ms;
             else
                 night += ms;
@@ -365,15 +364,8 @@ void InsightsPage::refresh()
 
     QVector<ChartBarData> trend;
     qint64 trendMax = 1;
-    qint64 dayTotals[14] = {};
-    for (int i = 0; i < 14; ++i) {
-        const QDate day = today.addDays(-(13 - i));
-        qint64 total = 0;
-        for (const auto& v : tracker_.store().hourly_totals(localDayString(day).toStdString()))
-            total += v;
-        dayTotals[i] = total;
-        trendMax = std::max(trendMax, total);
-    }
+    for (int i = 0; i < 14; ++i)
+        trendMax = std::max(trendMax, dayTotals[i]);
 
     for (int i = 0; i < 14; ++i) {
         const QDate day = today.addDays(-(13 - i));

@@ -1,6 +1,7 @@
 #include "ui/MainWindow.h"
 
 #include "theme.h"
+#include "format.h"
 #include "services/Autostart.h"
 #include "services/TrayService.h"
 #include "AppIcon.h"
@@ -22,24 +23,6 @@
 
 #include <Windows.h>
 #include <dwmapi.h>
-
-namespace {
-
-QString formatDuration(qint64 ms)
-{
-    if (ms < 0)
-        ms = 0;
-    const qint64 totalMin = ms / 60000;
-    if (totalMin >= 60)
-        return QStringLiteral("%1h %2m").arg(totalMin / 60).arg(totalMin % 60);
-    if (totalMin >= 1)
-        return QStringLiteral("%1m").arg(totalMin);
-    if (ms == 0)
-        return QStringLiteral("0m");
-    return QStringLiteral("%1s").arg(qMax<qint64>(1, ms / 1000));
-}
-
-}  // namespace
 
 MainWindow::MainWindow(Tracker& tracker, QWidget* parent)
     : QMainWindow(parent)
@@ -155,7 +138,6 @@ void MainWindow::buildSidebar(QWidget* sidebar)
     settingsNav_->setObjectName(QStringLiteral("nav"));
     for (QPushButton* btn : {overviewNav_, insightsNav_, settingsNav_}) {
         btn->setCursor(Qt::PointingHandCursor);
-        btn->setFocusPolicy(Qt::NoFocus);
         lay->addWidget(btn);
     }
 
@@ -232,10 +214,23 @@ void MainWindow::clearData()
 void MainWindow::refreshAll()
 {
     const qint64 todayMs = tracker_.store().today_total_ms();
+    const QString tip = QStringLiteral("Screeni — %1").arg(formatDuration(todayMs));
+    if (tip != trayTip_) {
+        tray_->updateTip(tip);
+        trayTip_ = tip;
+    }
+
+    // The pages rebuild widgets and hit the shell for icons; with the window in
+    // the tray (or the page off-screen) that work produces nothing visible.
+    // Hidden pages refresh lazily when navigated to (showOverview/showInsights).
+    if (!isVisible())
+        return;
+
     todayTotal_->setText(formatDuration(todayMs));
-    tray_->updateTip(QStringLiteral("Screeni — %1").arg(formatDuration(todayMs)));
-    overview_->refresh();
-    insights_->refresh();
+    if (stack_->currentWidget() == overview_)
+        overview_->refresh();
+    else
+        insights_->refresh();
 }
 
 void MainWindow::onTrayShow()
@@ -243,6 +238,7 @@ void MainWindow::onTrayShow()
     show();
     raise();
     activateWindow();
+    refreshAll();
 }
 
 void MainWindow::onTrayExit()
