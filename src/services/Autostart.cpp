@@ -39,7 +39,7 @@ void Autostart::setEnabled(bool enabled)
     if (enabled) {
         const std::wstring path = modulePath();
         if (!path.empty()) {
-            std::wstring value = L"\"" + path + L"\"";
+            std::wstring value = L"\"" + path + L"\" --autostart";
             RegSetValueExW(key, kValueName, 0, REG_SZ, reinterpret_cast<const BYTE*>(value.c_str()),
                            static_cast<DWORD>((value.size() + 1) * sizeof(wchar_t)));
         }
@@ -48,7 +48,15 @@ void Autostart::setEnabled(bool enabled)
     }
     RegCloseKey(key);
 }
+
+void Autostart::sync()
+{
+    if (isEnabled())
+        setEnabled(true);
+}
+
 #else
 bool Autostart::isEnabled() { return false; }
 void Autostart::setEnabled(bool) {}
+void Autostart::sync() {}
 #endif

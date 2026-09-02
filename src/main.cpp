@@ -1,4 +1,5 @@
 #include "tracker.h"
+#include "services/Autostart.h"
 #include "services/UpdateService.h"
 #include "theme.h"
 #include "ui/MainWindow.h"
@@ -50,8 +51,11 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    Autostart::sync();
+
     MainWindow window(tracker);
-    window.show();
+    if (!app.arguments().contains(QStringLiteral("--autostart")))
+        window.show();
 
     const int code = app.exec();
     tracker.stop();
